@@ -1,0 +1,174 @@
+import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
+
+export async function POST(request: Request) {
+  const { getUser } = getKindeServerSession();
+  const user = await getUser();
+
+  if (!user) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const { address, cart, total, shipping }: { address: any; cart: any[]; total: number, shipping: any } = body;
+
+    // 1. Verifica ou cria endereço
+    if (!address.id) {
+      const newAddress = await prisma.address.create({
+        data: {
+          street: address.street,
+          number: address.number,
+          complement: address.complement,
+          city: address.city,
+          state: address.state,
+          zipCode: address.zipCode,
+          country: "Brasil",
+          userId: user.id,
+        },
+      });
+      address.id = newAddress.id;
+    }
+
+    // 2. Cria um registro de checkout temporário
+    const newCheckout = await prisma.checkout.create({
+      data: {
+        userId: user.id,
+        cart: cart as any,
+        address: address as any,
+        shipping: shipping as any,
+        total: Math.round(total * 100),
+      },
+    });
+
+    // 3. Cria cliente no Asaas
+    const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+
+    const customerResponse = await fetch("https://api-sandbox.asaas.com/v3/customers", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        access_token: process.env.ASAAS_SANDBOX_KEY!,
+      },
+      body: JSON.stringify({
+        name: `${user.given_name} ${user.family_name}`,
+        email: user.email,
+        cpfCnpj: dbUser?.cpf,
+        phone: dbUser?.phone,
+        address: address.street,
+        addressNumber: address.number,
+        complement: address.complement,
+        province: address.state,
+        postalCode: address.zipCode,
+      }),
+    });
+
+    const customerResponseText = await customerResponse.text();
+    if (!customerResponse.ok) {
+      console.error("Erro ao criar cliente no Asaas:", customerResponseText);
+      return NextResponse.json({ error: "Erro ao criar cliente", details: customerResponseText }, { status: customerResponse.status });
+    }
+    const customerData = JSON.parse(customerResponseText);
+
+    // Atualiza o checkout com o ID do cliente Asaas
+    try {
+      console.log(`Tentando atualizar checkout ${newCheckout.id} com Asaas customerId: ${customerData.id}`);
+      await prisma.checkout.update({
+        where: { id: newCheckout.id },
+        data: {
+          paymentProviderData: {
+            gateway: 'asaas',
+            customerId: customerData.id,
+          },
+        },
+      });
+      console.log(`Checkout ${newCheckout.id} atualizado com sucesso.`);
+    } catch (error) {
+      console.error(`Erro ao atualizar o checkout ${newCheckout.id} com dados do Asaas:`, error);
+    }
+
+    // 4. Prepara itens para o checkout Asaas, incluindo imagem em Base64
+    const asaasItems = await Promise.all(
+      cart.map(async (item: any) => {
+        let imageBase64 = null;
+        if (item.image) {
+          try {
+            const imageUrl = new URL(item.image, process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000').toString();
+            const response = await fetch(imageUrl);
+            if (response.ok) {
+              const buffer = await response.arrayBuffer();
+              imageBase64 = Buffer.from(buffer).toString('base64');
+            }
+          } catch (error) {
+            console.error(`Falha ao buscar ou converter imagem ${item.image}:`, error);
+          }
+        }
+        
+        const asaasItem: any = {
+          name: item.name.substring(0, 30),
+          quantity: item.quantity,
+          value: item.price,
+        };
+
+        // Adiciona a imagem apenas se ela foi convertida com sucesso
+        // e não é excessivamente grande (ex: limite de 1MB)
+        if (imageBase64 && imageBase64.length < 1024 * 1024) {
+          asaasItem.imageBase64 = imageBase64;
+        } else if (imageBase64) {
+          console.warn(`Imagem para o item ${item.name} é muito grande (${(imageBase64.length / 1024).toFixed(2)} KB) e não será enviada.`);
+        }
+
+        return asaasItem;
+      })
+    );
+
+    if (shipping && shipping.price) {
+      asaasItems.push({
+        name: "Custo de Envio",
+        quantity: 1,
+        value: parseFloat(shipping.price),
+      });
+    }
+
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
+    // 5. Cria checkout hospedado no Asaas
+    const checkoutResponse = await fetch("https://api-sandbox.asaas.com/v3/checkouts", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        access_token: process.env.ASAAS_SANDBOX_KEY!,
+      },
+      body: JSON.stringify({
+        billingTypes: ["CREDIT_CARD"],
+        chargeTypes: ["DETACHED"],
+        items: asaasItems,
+        description: `Pedido FoxFit - ${cart.length} item(s)`,
+        externalReference: newCheckout.id,
+        callback: {
+          successUrl: `${baseUrl}/order-review/payment/sucess`,
+          cancelUrl: `${baseUrl}/order-review/payment/cancel`,
+          expiredUrl: `${baseUrl}/order-review/payment/expired`,
+        },
+        customer: customerData.id,
+      }),
+    });
+
+    const checkoutResponseText = await checkoutResponse.text();
+    
+    if (!checkoutResponse.ok) {
+      console.error("Erro ao criar checkout no Asaas:", checkoutResponseText);
+      return NextResponse.json({ error: "Erro ao criar checkout", details: checkoutResponseText }, { status: checkoutResponse.status });
+    }
+    const checkoutData = JSON.parse(checkoutResponseText);
+
+    // 5. Retorna URL do checkout para redirecionar
+    return NextResponse.json({ checkoutUrl: checkoutData.link });
+  } catch (error) {
+    console.error("Erro no processo de checkout:", error);
+    return NextResponse.json({ message: "Erro interno do servidor" }, { status: 500 });
+  }
+}
