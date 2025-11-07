@@ -146,86 +146,95 @@ export async function createProduct(formData: FormData) {
   }
 
   try {
-    let categoryId: string;
+    await prisma.$transaction(async (tx) => {
+      let categoryId: string;
 
-    if (subcategoryName) {
-      const parentCategory = await prisma.category.upsert({
-        where: { name: categoryName },
-        update: {},
-        create: { name: categoryName },
-      });
+      if (subcategoryName) {
+        const parentCategory = await tx.category.upsert({
+          where: { name: categoryName },
+          update: {},
+          create: { name: categoryName },
+        });
 
-      const subCategory = await prisma.category.upsert({
-        where: { name: subcategoryName },
-        update: { parentId: parentCategory.id },
-        create: { name: subcategoryName, parentId: parentCategory.id },
-      });
-      categoryId = subCategory.id;
-    } else {
-      const category = await prisma.category.upsert({
-        where: { name: categoryName },
-        update: {},
-        create: { name: categoryName },
-      });
-      categoryId = category.id;
-    }
+        const subCategory = await tx.category.upsert({
+          where: { name: subcategoryName },
+          update: { parentId: parentCategory.id },
+          create: { name: subcategoryName, parentId: parentCategory.id },
+        });
+        categoryId = subCategory.id;
+      } else {
+        const category = await tx.category.upsert({
+          where: { name: categoryName },
+          update: {},
+          create: { name: categoryName },
+        });
+        categoryId = category.id;
+      }
 
-    const slug = generateSlug(productData.name);
+      const slug = generateSlug(productData.name);
 
-    const product = await prisma.product.create({
-      data: {
-        ...productData,
-        slug: slug,
-        categoryId: categoryId,
-      },
-    });
-
-    for (const variant of productVariants) {
-      const { quantity, imageUrl, color, width, height, length, weight, ...variantData } = variant;
-
-      const aliasMap: Record<string, string> = {
-        'black': 'preto', 'white': 'branco', 'gray': 'cinza', 'red': 'vermelho',
-        'green': 'verde', 'blue': 'azul', 'yellow': 'amarelo', 'orange': 'laranja',
-        'purple': 'roxo', 'pink': 'rosa', 'brown': 'marrom',
-      };
-      const canonicalColorMap: Record<string, string> = {
-        'preto': '#000000', 'branco': '#FFFFFF', 'cinza': '#808080', 'vermelho': '#FF0000',
-        'verde': '#008000', 'azul': '#0000FF', 'amarelo': '#FFFF00', 'laranja': '#FFA500',
-        'roxo': '#800080', 'rosa': '#FFC0CB', 'marrom': '#A52A2A',
-      };
-
-      const inputColor = color.toLowerCase();
-      const canonicalName = aliasMap[inputColor] || inputColor;
-      const hexCode = canonicalColorMap[canonicalName] || `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`;
-
-      const colorRecord = await prisma.color.upsert({
-        where: { name: canonicalName },
-        update: { hexCode: hexCode },
-        create: { name: canonicalName, hexCode: hexCode },
-      });
-
-      await prisma.productVariant.create({
+      const product = await tx.product.create({
         data: {
-          ...variantData,
-          colorId: colorRecord.id,
-          imageUrl: imageUrl,
-          productId: product.id,
-          inventory: {
-            create: {
-              quantity: quantity,
-            },
-          },
-          dimensions: {
-            create: {
-              width: width,
-              height: height,
-              length: length,
-              weight: weight,
-            },
-          },
+          ...productData,
+          slug: slug,
+          categoryId: categoryId,
         },
       });
-    }
+
+      for (const variant of productVariants) {
+        const { quantity, imageUrl, color, width, height, length, weight, ...variantData } = variant;
+
+        const aliasMap: Record<string, string> = {
+          'black': 'preto', 'white': 'branco', 'gray': 'cinza', 'red': 'vermelho',
+          'green': 'verde', 'blue': 'azul', 'yellow': 'amarelo', 'orange': 'laranja',
+          'purple': 'roxo', 'pink': 'rosa', 'brown': 'marrom',
+        };
+        const canonicalColorMap: Record<string, string> = {
+          'preto': '#000000', 'branco': '#FFFFFF', 'cinza': '#808080', 'vermelho': '#FF0000',
+          'verde': '#008000', 'azul': '#0000FF', 'amarelo': '#FFFF00', 'laranja': '#FFA500',
+          'roxo': '#800080', 'rosa': '#FFC0CB', 'marrom': '#A52A2A',
+        };
+
+        const inputColor = color.toLowerCase();
+        const canonicalName = aliasMap[inputColor] || inputColor;
+        const hexCode = canonicalColorMap[canonicalName] || `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`;
+
+        const colorRecord = await tx.color.upsert({
+          where: { name: canonicalName },
+          update: { hexCode: hexCode },
+          create: { name: canonicalName, hexCode: hexCode },
+        });
+
+        await tx.productVariant.create({
+          data: {
+            ...variantData,
+            colorId: colorRecord.id,
+            imageUrl: imageUrl,
+            productId: product.id,
+            inventory: {
+              create: {
+                quantity: quantity,
+              },
+            },
+            stockMovements: {
+              create: {
+                type: 'IN',
+                quantity: quantity,
+                notes: 'Estoque inicial',
+              }
+            },
+            dimensions: {
+              create: {
+                width: width,
+                height: height,
+                length: length,
+                weight: weight,
+              },
+            },
+          },
+        });
+      }
+    });
   } catch {
     return { error: "Failed to create product in database" };
   }
@@ -238,7 +247,7 @@ export async function editProduct(formData: FormData) {
   const user = await getUser();
 
   if (!user || user.email !== "ewerton.businees@gmail.com") {
-    redirect("/login"); // Directly redirect if not authorized
+    redirect("/login");
   }
 
   const productId = formData.get("productId") as string;
@@ -266,100 +275,129 @@ export async function editProduct(formData: FormData) {
   const slug = generateSlug(productData.name);
 
   try {
-    await prisma.product.update({
-      where: { id: productId },
-      data: {
-        ...productData,
-        slug: slug,
-        categoryId: categoryId,
-      },
-    });
-
-    const existingVariants = await prisma.productVariant.findMany({
-      where: { productId: productId },
-    });
-
-    const newVariantSkus = productVariants.map((v) => v.sku);
-    const variantsToDelete = existingVariants.filter(
-      (v) => !newVariantSkus.includes(v.sku)
-    );
-
-    for (const variant of variantsToDelete) {
-      await prisma.inventory.delete({ where: { variantId: variant.id } });
-      await prisma.productVariant.delete({ where: { id: variant.id } });
-    }
-
-    for (const variant of productVariants) {
-      const { quantity, imageUrl, color, width, height, length, weight, ...variantData } = variant;
-
-      const aliasMap: Record<string, string> = {
-        'black': 'preto', 'white': 'branco', 'gray': 'cinza', 'red': 'vermelho',
-        'green': 'verde', 'blue': 'azul', 'yellow': 'amarelo', 'orange': 'laranja',
-        'purple': 'roxo', 'pink': 'rosa', 'brown': 'marrom',
-      };
-      const canonicalColorMap: Record<string, string> = {
-        'preto': '#000000', 'branco': '#FFFFFF', 'cinza': '#808080', 'vermelho': '#FF0000',
-        'verde': '#008000', 'azul': '#0000FF', 'amarelo': '#FFFF00', 'laranja': '#FFA500',
-        'roxo': '#800080', 'rosa': '#FFC0CB', 'marrom': '#A52A2A',
-      };
-
-      const inputColor = color.toLowerCase();
-      const canonicalName = aliasMap[inputColor] || inputColor;
-      const hexCode = canonicalColorMap[canonicalName] || `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`;
-
-      const colorRecord = await prisma.color.upsert({
-        where: { name: canonicalName },
-        update: { hexCode: hexCode },
-        create: { name: canonicalName, hexCode: hexCode },
+    await prisma.$transaction(async (tx) => {
+      await tx.product.update({
+        where: { id: productId },
+        data: {
+          ...productData,
+          slug: slug,
+          categoryId: categoryId,
+        },
       });
 
-      const existingVariant = existingVariants.find((v) => v.sku === variant.sku);
+      const existingVariants = await tx.productVariant.findMany({
+        where: { productId: productId },
+        include: { inventory: true },
+      });
 
-      if (existingVariant) {
-        await prisma.productVariant.update({
-          where: { id: existingVariant.id },
-          data: {
-            ...variantData,
-            colorId: colorRecord.id,
-            imageUrl: imageUrl,
-            inventory: {
-              upsert: {
-                create: { quantity: quantity },
-                update: { quantity: quantity },
-              },
-            },
-            dimensions: {
-              upsert: {
-                create: { width: width, height: height, length: length, weight: weight },
-                update: { width: width, height: height, length: length, weight: weight },
-              },
-            },
-          },
-        });
-      } else {
-        await prisma.productVariant.create({
-          data: {
-            ...variantData,
-            colorId: colorRecord.id,
-            imageUrl: imageUrl,
-            productId: productId,
-            inventory: {
-              create: {
-                quantity: quantity,
-              },
-            },
-            dimensions: {
-              create: {
-                width: width,
-                height: height,
-                length: length,
-                weight: weight,
-              },
-            },
-          },
-        });
+      const newVariantSkus = productVariants.map((v) => v.sku);
+      const variantsToDelete = existingVariants.filter(
+        (v) => !newVariantSkus.includes(v.sku)
+      );
+
+      for (const variant of variantsToDelete) {
+        await tx.stockMovement.deleteMany({ where: { variantId: variant.id } });
+        await tx.inventory.delete({ where: { variantId: variant.id } });
+        await tx.productVariant.delete({ where: { id: variant.id } });
       }
-    }
+
+      for (const variant of productVariants) {
+        const { quantity, imageUrl, color, width, height, length, weight, ...variantData } = variant;
+
+        const aliasMap: Record<string, string> = {
+          'black': 'preto', 'white': 'branco', 'gray': 'cinza', 'red': 'vermelho',
+          'green': 'verde', 'blue': 'azul', 'yellow': 'amarelo', 'orange': 'laranja',
+          'purple': 'roxo', 'pink': 'rosa', 'brown': 'marrom',
+        };
+        const canonicalColorMap: Record<string, string> = {
+          'preto': '#000000', 'branco': '#FFFFFF', 'cinza': '#808080', 'vermelho': '#FF0000',
+          'verde': '#008000', 'azul': '#0000FF', 'amarelo': '#FFFF00', 'laranja': '#FFA500',
+          'roxo': '#800080', 'rosa': '#FFC0CB', 'marrom': '#A52A2A',
+        };
+
+        const inputColor = color.toLowerCase();
+        const canonicalName = aliasMap[inputColor] || inputColor;
+        const hexCode = canonicalColorMap[canonicalName] || `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`;
+
+        const colorRecord = await tx.color.upsert({
+          where: { name: canonicalName },
+          update: { hexCode: hexCode },
+          create: { name: canonicalName, hexCode: hexCode },
+        });
+
+        const existingVariant = existingVariants.find((v) => v.sku === variant.sku);
+
+        if (existingVariant) {
+          await tx.productVariant.update({
+            where: { id: existingVariant.id },
+            data: {
+              ...variantData,
+              colorId: colorRecord.id,
+              imageUrl: imageUrl,
+              dimensions: {
+                upsert: {
+                  create: { width: width, height: height, length: length, weight: weight },
+                  update: { width: width, height: height, length: length, weight: weight },
+                },
+              },
+            },
+          });
+
+          const currentQuantity = existingVariant.inventory?.quantity ?? 0;
+          const newQuantity = quantity;
+          const diff = newQuantity - currentQuantity;
+
+          if (diff !== 0) {
+            await tx.inventory.update({
+              where: { variantId: existingVariant.id },
+              data: {
+                quantity: {
+                  increment: diff,
+                },
+              },
+            });
+
+            await tx.stockMovement.create({
+              data: {
+                type: diff > 0 ? 'IN' : 'OUT',
+                quantity: Math.abs(diff),
+                notes: 'Ajuste manual',
+                variantId: existingVariant.id,
+              },
+            });
+          }
+        } else {
+          await tx.productVariant.create({
+            data: {
+              ...variantData,
+              colorId: colorRecord.id,
+              imageUrl: imageUrl,
+              productId: productId,
+              inventory: {
+                create: {
+                  quantity: quantity,
+                },
+              },
+              stockMovements: {
+                create: {
+                  type: 'IN',
+                  quantity: quantity,
+                  notes: 'Estoque inicial',
+                },
+              },
+              dimensions: {
+                create: {
+                  width: width,
+                  height: height,
+                  length: length,
+                  weight: weight,
+                },
+              },
+            },
+          });
+        }
+      }
+    });
 
     revalidatePath("/dashboard/products");
     return { success: true };

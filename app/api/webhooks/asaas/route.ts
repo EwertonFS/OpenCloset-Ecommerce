@@ -63,9 +63,29 @@ export async function POST(request: Request) {
 
             // 6. Criar o pedido real no banco de dados e decrementar o estoque
             const newOrder = await prisma.$transaction(async (tx) => {
-              for (const item of (checkout.cart as any[])) {
+              const order = await tx.order.create({
+                data: {
+                    totalAmount: checkout.total,
+                    amount: checkout.total,
+                    status: 'paid',
+                    addressId: (checkout.address as any).id,
+                    paymentProviderId: paymentId,
+                    items: {
+                        create: (checkout.cart as any[]).map((item) => ({
+                            quantity: item.quantity,
+                            price: Math.round(item.price * 100),
+                            variant: { connect: { sku: item.sku } },
+                        })),
+                    },
+                },
+                include: {
+                  items: true,
+                }
+            });
+
+              for (const item of order.items) {
                   const variant = await tx.productVariant.findUniqueOrThrow({
-                      where: { sku: item.sku },
+                      where: { sku: (checkout.cart as any[]).find(c => c.sku === item.variantId)?.sku },
                       select: { id: true }
                   });
           
@@ -84,26 +104,18 @@ export async function POST(request: Request) {
                   });
           
                   if (inventoryUpdate.count === 0) {
-                      throw new Error(`Insufficient stock for SKU: ${item.sku}.`);
+                      throw new Error(`Insufficient stock for SKU: ${item.variantId}.`);
                   }
+
+                  await tx.stockMovement.create({
+                    data: {
+                      type: 'OUT',
+                      quantity: item.quantity,
+                      notes: `Venda - Pedido #${order.id}`,
+                      variantId: variant.id,
+                    }
+                  });
               }
-          
-              const order = await tx.order.create({
-                  data: {
-                      totalAmount: checkout.total,
-                      amount: checkout.total,
-                      status: 'paid',
-                      addressId: (checkout.address as any).id,
-                      paymentProviderId: paymentId,
-                      items: {
-                          create: (checkout.cart as any[]).map((item) => ({
-                              quantity: item.quantity,
-                              price: Math.round(item.price * 100),
-                              variant: { connect: { sku: item.sku } },
-                          })),
-                      },
-                  },
-              });
           
               await tx.checkout.delete({
                   where: { id: checkout.id },

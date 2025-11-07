@@ -39,23 +39,33 @@ async function getData() {
       variants: {
         include: {
           inventory: true,
+          stockMovements: true, // Fetch all movements
         },
       },
     },
   });
 
   return products.map(product => {
-    let totalQuantity = 0;
-    if (product.variants.length === 0) {
-      totalQuantity = 1; // Default quantity for products without variants
-    } else {
-      totalQuantity = product.variants.reduce((sum, variant) => {
-        return sum + (variant.inventory?.quantity || 0);
-      }, 0);
-    }
+    const totalQuantity = product.variants.reduce((sum, variant) => {
+      return sum + (variant.inventory?.quantity || 0);
+    }, 0);
+
+    const initialStock = product.variants.reduce((sum, variant) => {
+      const initialMovement = variant.stockMovements.find(m => m.notes === 'Estoque inicial');
+      return sum + (initialMovement?.quantity || 0);
+    }, 0);
+
+    const itemsSold = product.variants.reduce((sum, variant) => {
+      const soldMovements = variant.stockMovements.filter(m => m.type === 'OUT');
+      const soldQuantity = soldMovements.reduce((s, move) => s + move.quantity, 0);
+      return sum + soldQuantity;
+    }, 0);
+
     return {
       ...product,
-      totalQuantity,
+      totalQuantity, // Estoque Atual
+      initialStock, // Estoque Inicial
+      itemsSold, // Itens Vendidos
     };
   });
 }
@@ -89,10 +99,11 @@ const ProductsRoute = async () => {
                 <TableHead>Status</TableHead>
                 <TableHead>Destaque</TableHead>
                 <TableHead>Categoria</TableHead>
-                <TableHead>PreçoBase</TableHead>
-                <TableHead>QTD.Adcionada</TableHead>
-                <TableHead>EstoqueReal</TableHead>
+                <TableHead>Preço Base</TableHead>
+                <TableHead>Estoque Inicial</TableHead>
                 <TableHead className="w-[100px]">Date</TableHead>
+                <TableHead>Estoque Atual</TableHead>
+                <TableHead>Itens Vendidos</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -114,11 +125,12 @@ const ProductsRoute = async () => {
                   <TableCell>{item.isFeatured ? 'Sim' : 'Não'}</TableCell>
                   <TableCell>{item.category.name}</TableCell>
                   <TableCell>{item.price}</TableCell>
-                  <TableCell>{item.totalQuantity}</TableCell>
-                  <TableCell>{item.totalQuantity}</TableCell>{/* mostra estoque atual decrementado pela vendas */}
+                  <TableCell>{item.initialStock}</TableCell>
                   <TableCell>
                     {item.createdAt.toLocaleDateString('pt-BR')}
                   </TableCell>
+                  <TableCell>{item.totalQuantity}</TableCell>
+                  <TableCell>{item.itemsSold}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
