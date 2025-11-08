@@ -538,15 +538,21 @@ export async function getFilteredProducts({
   }
 
   if ((sizes && sizes.length > 0) || (colors && colors.length > 0)) {
-    where.variants = {
-      some: {},
-    };
+    // Cria um objeto intermediário tipado para ProductVariantWhereInput
+    const variantWhere: Prisma.ProductVariantWhereInput = {};
+
     if (sizes && sizes.length > 0) {
-      where.variants.some.size = { in: sizes };
+      variantWhere.size = { in: sizes };
     }
+
     if (colors && colors.length > 0) {
-      where.variants.some.color = { name: { in: colors } };
+      // Filtrar por relação color — tipa como Prisma.ColorWhereInput
+      variantWhere.color = { name: { in: colors } } as Prisma.ColorWhereInput;
     }
+
+    where.variants = {
+      some: variantWhere,
+    };
   }
 
   const products = await prisma.product.findMany({
@@ -635,7 +641,7 @@ export async function AddCartItem(formData: FormData) {
   if (user && user.id) {
     cartKey = `cart:${user.id}`;
   } else {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const currentVisitorId = cookieStore.get('visitor_id')?.value;
     let finalVisitorId: string;
 

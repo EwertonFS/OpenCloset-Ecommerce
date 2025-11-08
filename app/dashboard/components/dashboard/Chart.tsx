@@ -11,15 +11,18 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
+
 interface iAppProps {
-  data: {
-    date: string;
-    revenue: number;
-  }[];
+  data: DataItem[];
 }
 
-const aggregateData = (data: any) => {
-  const aggregated: Record<string, number> = data.reduce((acc, curr) => {
+interface DataItem {
+  date: string;
+  revenue: number;
+}
+
+const aggregateData = (data:DataItem[]) => {
+  const aggregated: Record<string, number> = data.reduce((acc: Record<string, number>, curr: DataItem) => {
     acc[curr.date] = (acc[curr.date] || 0) + curr.revenue;
     return acc;
   }, {});

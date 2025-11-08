@@ -3,6 +3,75 @@ import { prisma } from '@/lib/prisma';
 import { headers } from 'next/headers';
 import { addToCart, checkoutCart, generateLabel, getLabelPrintUrl } from '@/lib/melhor-envio';
 
+
+
+// Interfaces do Asaas
+interface AsaasPayment {
+  id: string;
+  customer: string;
+  value: number;
+  netValue: number;
+  status: string;
+  dueDate: string;
+  paymentDate?: string;
+}
+
+interface AsaasWebhookPayload {
+  event: string;
+  payment: AsaasPayment;
+}
+
+// Interfaces do Checkout
+interface CartItem {
+  quantity: number;
+  price: number;
+  sku: string;
+  variantId?: string;
+}
+
+interface CheckoutAddress {
+  id: string;
+  street: string;
+  number: string;
+  complement?: string;
+  district: string;
+  city: string;
+  state: string;
+  zipCode: string;
+}
+
+interface PaymentProviderData {
+  customerId: string;
+  paymentId?: string;
+  status?: string;
+  value?: number;
+  paymentDate?: string;
+}
+
+interface Checkout {
+  id: string;
+  total: number;
+  cart: CartItem[];
+  address: CheckoutAddress;
+  paymentProviderData: PaymentProviderData;
+}
+
+// Interfaces do Melhor Envio
+interface MelhorEnvioOrder {
+  id: string;
+  tracking?: string;
+  status?: string;
+  deliveryTime?: number;
+}
+
+interface MelhorEnvioPurchase {
+  purchase: {
+    orders: MelhorEnvioOrder[];
+    protocol: string;
+    status: string;
+  };
+}
+
 // TODO: Implementar a verificação real da assinatura do Asaas.
 // const verifyAsaasSignature = async (signature: string | null): Promise<boolean> => {
 //   const webhookToken = process.env.ASAAS_WEBHOOK_SECRET;
@@ -16,6 +85,10 @@ import { addToCart, checkoutCart, generateLabel, getLabelPrintUrl } from '@/lib/
 //   return true;
 // };
 
+
+
+
+
 export async function POST(request: Request) {
   const headersList = await headers();
   const signature = headersList.get('Asaas-Signature');
@@ -26,7 +99,7 @@ export async function POST(request: Request) {
   // }
 
   try {
-    const payload = await request.json(); 
+    const payload = await request.json() as AsaasWebhookPayload;
     console.log("Payload completo do webhook Asaas:", JSON.stringify(payload, null, 2));
     const eventType = payload.event;
 
@@ -44,8 +117,9 @@ export async function POST(request: Request) {
 
       // Encontrar o registro de checkout temporário usando o asaasCustomerId
       const checkout = await prisma.checkout.findFirst({
+  
         where: {
-          // @ts-ignore
+        
           paymentProviderData: {
             path: ['customerId'],
             equals: asaasCustomerId,
@@ -54,7 +128,8 @@ export async function POST(request: Request) {
         orderBy: {
           createdAt: 'desc',
         },
-      });
+      }) as Checkout | null;
+
 
       if (!checkout) {
         console.error(`Registro de checkout com asaasCustomerId ${asaasCustomerId} não encontrado para o pagamento ${paymentId}.`);
@@ -68,10 +143,10 @@ export async function POST(request: Request) {
                     totalAmount: checkout.total,
                     amount: checkout.total,
                     status: 'paid',
-                    addressId: (checkout.address as any).id,
+                    addressId:checkout.address.id,
                     paymentProviderId: paymentId,
                     items: {
-                        create: (checkout.cart as any[]).map((item) => ({
+                        create: (checkout.cart as CartItem[]).map((item) => ({
                             quantity: item.quantity,
                             price: Math.round(item.price * 100),
                             variant: { connect: { sku: item.sku } },
@@ -85,7 +160,7 @@ export async function POST(request: Request) {
 
               for (const item of order.items) {
                   const variant = await tx.productVariant.findUniqueOrThrow({
-                      where: { sku: (checkout.cart as any[]).find(c => c.sku === item.variantId)?.sku },
+                      where: { sku: (checkout.cart as CartItem[]).find(c => c.sku === item.variantId)?.sku },
                       select: { id: true }
                   });
           
@@ -135,14 +210,14 @@ export async function POST(request: Request) {
         console.log(`Pedido ${newOrder.id} adicionado ao carrinho do Melhor Envio com ID: ${cartItem.id}`);
 
         // 2. Comprar a etiqueta
-        const purchase = await checkoutCart([cartItem.id]);
+        const purchase =(await checkoutCart([cartItem.id]))as MelhorEnvioPurchase;
         console.log(`Compra da etiqueta para o pedido ${newOrder.id} realizada com sucesso.`);
         console.log("Conteúdo do objeto 'purchase':", JSON.stringify(purchase, null, 2)); // DEBUG
 
         // 3. Gerar a etiqueta
         // A API de geração pode demorar um pouco, então esperamos um momento.
         await new Promise(resolve => setTimeout(resolve, 2000)); // Delay de 2 segundos
-        const generated = await generateLabel(purchase.purchase.orders.map((o: any) => o.id));
+        const generated = await generateLabel(purchase.purchase.orders.map((o: MelhorEnvioOrder) => o.id));
         console.log(`Geração da etiqueta para o pedido ${newOrder.id} concluída.`);
 
         // 4. Obter URL de impressão
@@ -183,8 +258,12 @@ export async function POST(request: Request) {
           console.error(`Não foi possível obter a URL de impressão ou o código de rastreio para o pedido ${newOrder.id}`);
         }
 
-      } catch (shippingError: any) {
-        console.error(`ERRO AO GERAR ETIQUETA DE ENVIO para o pedido ${newOrder.id}:`, shippingError.message);
+      } catch (shippingError:unknown) {
+         if (shippingError instanceof Error) {
+          console.error(`ERRO AO GERAR ETIQUETA DE ENVIO para o pedido ${newOrder.id}:`, shippingError.message);
+        } else {
+          console.error(`ERRO AO GERAR ETIQUETA DE ENVIO para o pedido ${newOrder.id}:`, shippingError);
+        }
         // Mesmo com erro no frete, o pedido foi criado. Você pode adicionar um status ou log para tratamento manual.
       }
       // --- FIM DA INTEGRAÇÃO MELHOR ENVIO ---
@@ -192,8 +271,19 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ message: 'Webhook recebido com sucesso' }, { status: 200 });
 
-  } catch (error: any) {
-    console.error('Erro ao processar o webhook do Asaas:', error);
-    return NextResponse.json({ message: 'Erro interno do servidor', error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error('Erro ao processar o webhook do Asaas:', error);
+      return NextResponse.json({ 
+        message: 'Erro interno do servidor', 
+        error: error.message 
+      }, { status: 500 });
+    }
+    // Se não for um Error conhecido, registra o erro como está
+    console.error('Erro desconhecido ao processar webhook:', error);
+    return NextResponse.json({ 
+      message: 'Erro interno do servidor', 
+      error: 'Erro desconhecido' 
+    }, { status: 500 });
   }
-}
+};

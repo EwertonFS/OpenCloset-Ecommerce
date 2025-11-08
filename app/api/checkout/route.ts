@@ -1,8 +1,38 @@
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
+
+interface Address {
+  id?: string;
+  street: string;
+  number: string;
+  complement?: string;
+  district: string;
+  city: string;
+  state: string;
+  zipCode: string;
+}
+
+interface CartItem {
+  name: string;
+  quantity: number;
+  price: number;
+  image?: string;
+}
+
+interface Shipping {
+  price: string;
+}
+
+interface AsaasItem {
+  name: string;
+  quantity: number;
+  value: number;
+  imageBase64?: string;
+}
 
 export async function POST(request: Request) {
   const { getUser } = getKindeServerSession();
@@ -14,7 +44,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { address, cart, total, shipping }: { address: any; cart: any[]; total: number, shipping: any } = body;
+    const { address, cart, total, shipping }: { address: Address; cart: CartItem[]; total: number, shipping: Shipping } = body;
 
     // 1. Verifica ou cria endereço
     if (!address.id) {
@@ -23,6 +53,7 @@ export async function POST(request: Request) {
           street: address.street,
           number: address.number,
           complement: address.complement,
+          district: address.district,
           city: address.city,
           state: address.state,
           zipCode: address.zipCode,
@@ -37,9 +68,9 @@ export async function POST(request: Request) {
     const newCheckout = await prisma.checkout.create({
       data: {
         userId: user.id,
-        cart: cart as any,
-        address: address as any,
-        shipping: shipping as any,
+        cart: cart as unknown as Prisma.JsonArray,
+        address: address as unknown as Prisma.JsonObject,
+        shipping: shipping as unknown as Prisma.JsonObject,
         total: Math.round(total * 100),
       },
     });
@@ -91,9 +122,9 @@ export async function POST(request: Request) {
     }
 
     // 4. Prepara itens para o checkout Asaas, incluindo imagem em Base64
-    const asaasItems = await Promise.all(
-      cart.map(async (item: any) => {
-        let imageBase64 = null;
+    const asaasItems: AsaasItem[] = await Promise.all(
+      cart.map(async (item: CartItem) => {
+        let imageBase64: string | null = null;
         if (item.image) {
           try {
             const imageUrl = new URL(item.image, process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000').toString();
@@ -107,7 +138,7 @@ export async function POST(request: Request) {
           }
         }
         
-        const asaasItem: any = {
+        const asaasItem: AsaasItem = {
           name: item.name.substring(0, 30),
           quantity: item.quantity,
           value: item.price,

@@ -61,7 +61,7 @@ const BannerCreateRoute = () => {
         toast.success('Banner created successfully!');
         Router.push('/dashboard/banner');
       } catch (error) {
-        toast.error('Something went wrong');
+        toast.error(error instanceof Error ? error.message : 'Something went wrong');
       }
     });
   };
