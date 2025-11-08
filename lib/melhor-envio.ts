@@ -1,6 +1,5 @@
 
-// TODO: Adicionar tipos de dados mais específicos para o Pedido (Order)
-
+import { Order } from "@prisma/client";
 import { prisma } from "./prisma";
 
 const MELHOR_ENVIO_API_URL = process.env.MELHOR_ENVIO_API_URL || 'https://sandbox.melhorenvio.com.br/api/v2/me';
@@ -28,7 +27,7 @@ const from = {
 /**
  * Função genérica para fazer requisições à API do Melhor Envio
  */
-async function apiRequest(endpoint: string, options: RequestInit) {
+async function apiRequest(endpoint: string, options: RequestInit): Promise<unknown> {
     const headers = {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -42,7 +41,7 @@ async function apiRequest(endpoint: string, options: RequestInit) {
     });
 
     if (!response.ok) {
-        const error = await response.json();
+        const error: { message?: string } = await response.json();
         console.error(`Erro ao chamar a API do Melhor Envio no endpoint ${endpoint}:`, error);
         throw new Error(`Erro na API do Melhor Envio: ${error.message || response.statusText}`);
     }
@@ -53,7 +52,7 @@ async function apiRequest(endpoint: string, options: RequestInit) {
 /**
  * Adiciona um frete ao carrinho de compras do Melhor Envio.
  */
-export async function addToCart(order: any) {
+export async function addToCart(order: Order) {
     // 1. Buscar os itens do pedido e suas dimensões
     const orderWithDetails = await prisma.order.findUnique({
         where: { id: order.id },

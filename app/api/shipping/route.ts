@@ -1,7 +1,25 @@
 import { NextResponse } from 'next/server';
 
+interface Product {
+  id: string | number;
+  weight: number;
+  width: number;
+  height: number;
+  length: number;
+  quantity: number;
+  price?: number;
+  insurance_value?: number;
+}
+
+interface Rate {
+  id: number;
+  name: string;
+  price?: string;
+  error?: string;
+}
+
 export async function POST(request: Request) {
-  const { to_postal_code, products } = await request.json();
+  const { to_postal_code, products }: { to_postal_code: string; products: Product[] } = await request.json();
   // console.log("PASSO 1: Requisição recebida em /api/shipping com os dados:", { to_postal_code, products });
 
   const cleanedPostalCode = to_postal_code.replace(/\D/g, '');
@@ -19,7 +37,7 @@ export async function POST(request: Request) {
   }
 
   // Garante que cada produto tenha o campo obrigatório insurance_value
-  const productsWithInsurance = products.map((product: any) => ({
+  const productsWithInsurance = products.map((product: Product) => ({
     ...product,
     // A API exige insurance_value. Usamos o valor do produto, ou o próprio insurance_value se já vier, ou 0 como fallback.
     insurance_value: product.insurance_value ?? product.price ?? 0,
@@ -53,10 +71,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Não foi possível calcular o frete.', details: responseBody }, { status: response.status });
     }
 
-    const data = JSON.parse(responseBody);
+    const data: Rate[] = JSON.parse(responseBody);
     // console.log("PASSO 4: Dados da resposta (JSON parseado):", data);
 
-    const validRates = data.filter((rate: any) => rate.price && !rate.error);
+    const validRates = data.filter((rate: Rate) => rate.price && !rate.error);
     // console.log("PASSO 5: Opções de frete válidas que serão enviadas para o front-end:", validRates);
 
     return NextResponse.json(validRates);
