@@ -99,7 +99,7 @@ function useChart() {
 // Chart Tooltip
 const ChartTooltip = React.forwardRef<
   HTMLDivElement,
-  Omit<TooltipProps<any, any>, "content"> & {
+  Omit<TooltipProps<unknown, unknown>, "content"> & {
     hideIndicator?: boolean
     indicator?: "line" | "dot" | "dashed"
     hideLabel?: boolean

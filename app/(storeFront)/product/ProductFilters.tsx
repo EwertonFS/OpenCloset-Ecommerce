@@ -6,7 +6,7 @@
  import { Slider } from '@/components/ui/slider';
  import { Button } from '@/components/ui/button';
  import { type Category, type Color } from '@prisma/client';
- import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+ import { useRouter, usePathname } from 'next/navigation';
  
  interface FilterData {
   categories: (Category & { subcategories: { id: string; name: string }[] })[];

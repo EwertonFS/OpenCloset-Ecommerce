@@ -71,7 +71,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Não foi possível calcular o frete.', details: responseBody }, { status: response.status });
     }
 
-    const data: Rate[] = JSON.parse(responseBody);
+    const parsedData: unknown = JSON.parse(responseBody);
+    const data: Rate[] = parsedData as Rate[];
     // console.log("PASSO 4: Dados da resposta (JSON parseado):", data);
 
     const validRates = data.filter((rate: Rate) => rate.price && !rate.error);

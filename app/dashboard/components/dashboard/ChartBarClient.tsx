@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 
-const ChartBarDefault = dynamic(() => import('./ChartBarDefault').then((mod) => mod.ChartBarDefault), {
+const ChartBarDefault = dynamic(() => import('./ChartBarDefault').then((mod) => mod.default), {
   ssr: false,
   loading: () => <p>Loading chart...</p>,
 });

@@ -3,15 +3,15 @@
 import dynamic from 'next/dynamic';
 import React from 'react';
 
-const ChartBarDefault = dynamic(() => import('./dashboard/ChartBarDefault').then((mod) => mod.ChartBarDefault), {
+const ChartBarClient = dynamic(() => import('./dashboard/ChartBarClient').then((mod) => mod.default), {
   ssr: false,
   loading: () => <p>Loading chart...</p>,
 });
 
 interface ChartBarWrapperProps {
-  salesData: { month: string; desktop: number }[];
+  data: { month: string; desktop: number }[];
 }
 
-export function ChartBarWrapper({ salesData }: ChartBarWrapperProps) {
-  return <ChartBarDefault salesData={salesData} />;
+export function ChartBarWrapper({ data }: ChartBarWrapperProps) {
+  return <ChartBarClient data={data} />;
 }

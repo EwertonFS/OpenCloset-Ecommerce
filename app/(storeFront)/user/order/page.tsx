@@ -2,7 +2,7 @@ import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Image from "next/image";
-import { Separator } from "@/components/ui/separator";
+
 
 // Função para formatar preço para BRL
 const formatPrice = (priceInCents: number) => {
