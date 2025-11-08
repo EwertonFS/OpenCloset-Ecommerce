@@ -27,6 +27,7 @@ import {
   type PieProps,
   PolarAngleAxis,
   type PolarAngleAxisProps,
+  PolarRadiusAxis,
   type PolarRadiusAxisProps,
   Rectangle,
   type RectangleProps,
@@ -95,34 +96,6 @@ function useChart() {
   return context
 }
 
-const Chart = Object.assign(ChartContainer, {
-  Container: ChartContainer,
-  Tooltip: ChartTooltip,
-  TooltipContent: ChartTooltipContent,
-  Legend: ChartLegend,
-  Grid: CartesianGrid,
-  XAxis: XAxis,
-  YAxis: YAxis,
-  Line: Line,
-  Bar: Bar,
-  Area: Area,
-  Pie: Pie,
-  Cell: Cell,
-  Label: Label,
-  PolarGrid: PolarGrid,
-  PolarAngleAxis: PolarAngleAxis,
-  PolarRadiusAxis: PolarRadiusAxis,
-  RadialBar: RadialBar,
-  Sector: Sector,
-  Rectangle: Rectangle,
-  LineChart: LineChartPrimitive,
-  BarChart: BarChartPrimitive,
-  PieChart: PieChartPrimitive,
-  AreaChart: AreaChartPrimitive,
-  RadialBarChart: RadialBarChartPrimitive,
-  ResponsiveContainer: ResponsiveContainer,
-})
-
 // Chart Tooltip
 const ChartTooltip = React.forwardRef<
   HTMLDivElement,
@@ -146,8 +119,7 @@ const ChartTooltip = React.forwardRef<
 
     return (
       <Tooltip
-        wrapperStyle={{ outline: "none" }}
-        isAnimationActive={false}
+        wrapperstyle={{ outline: "none" }}
         cursor={
           hideIndicator
             ? false
@@ -322,6 +294,33 @@ const ChartTooltipContent = React.forwardRef<
   }
 )
 
+const Chart = Object.assign(ChartContainer, {
+  Container: ChartContainer,
+  Tooltip: ChartTooltip,
+  TooltipContent: ChartTooltipContent,
+  Legend: ChartLegend,
+  Grid: CartesianGrid,
+  XAxis: XAxis,
+  YAxis: YAxis,
+  Line: Line,
+  Bar: Bar,
+  Area: Area,
+  Pie: Pie,
+  Cell: Cell,
+  Label: Label,
+  PolarGrid: PolarGrid,
+  PolarAngleAxis: PolarAngleAxis,
+  PolarRadiusAxis: PolarRadiusAxis,
+  RadialBar: RadialBar,
+  Sector: Sector,
+  Rectangle: Rectangle,
+  LineChart: LineChartPrimitive,
+  BarChart: BarChartPrimitive,
+  PieChart: PieChartPrimitive,
+  AreaChart: AreaChartPrimitive,
+  RadialBarChart: RadialBarChartPrimitive,
+  ResponsiveContainer: ResponsiveContainer,
+})
 export {
   Chart,
   ChartContainer,

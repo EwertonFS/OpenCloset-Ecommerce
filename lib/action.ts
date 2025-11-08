@@ -1014,6 +1014,46 @@ export async function updateUserPersonalDetails(prevState: unknown, formData: Fo
     revalidatePath("/user/personal");
     return { success: "Details updated successfully" };
   } catch {
-    return { error: "Failed to update details" };
-  }
-}
+        return { error: "Failed to update details" };
+      }
+    }
+    
+    export async function getSalesData() {
+      noStore();
+      try {
+        const salesData = await prisma.order.findMany({
+          where: {
+            status: 'paid',
+          },
+          select: {
+            createdAt: true,
+            totalAmount: true,
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        });
+      
+        const monthlySales = salesData.reduce((acc, { createdAt, totalAmount }) => {
+          const month = new Date(createdAt).toLocaleString('pt-BR', { month: 'long' });
+          const total = totalAmount || 0;
+      
+          if (!acc[month]) {
+            acc[month] = 0;
+          }
+          acc[month] += total / 100; 
+          return acc;
+        }, {} as Record<string, number>);
+      
+        const chartData = Object.entries(monthlySales).map(([month, total]) => ({
+          month,
+          desktop: total,
+        }));
+      
+        return chartData;
+        
+      } catch (error) {
+        console.error("Failed to fetch sales data:", error);
+        return [];
+      }
+    }
