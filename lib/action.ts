@@ -542,7 +542,7 @@ export async function getFilteredProducts({
     const variantWhere: Prisma.ProductVariantWhereInput = {};
 
     if (sizes && sizes.length > 0) {
-      variantWhere.size = { in: sizes };
+      variantWhere.size = { in: sizes as Size[] };
     }
 
     if (colors && colors.length > 0) {

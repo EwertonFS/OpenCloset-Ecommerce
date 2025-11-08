@@ -36,7 +36,7 @@ interface ChartBarDefaultProps {
   data: ChartData[];
 }
 
-export function ChartBarDefault({ data }: ChartBarDefaultProps) {
+export default function ChartBarDefault({ data }: ChartBarDefaultProps) {
   const currentYear = new Date().getFullYear();
 
   return (
@@ -47,7 +47,7 @@ export function ChartBarDefault({ data }: ChartBarDefaultProps) {
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
-          <BarChart accessibilityLayer data={data}>
+          <BarChart accessibilityLayer data={data} isAnimationActive={false}>
             <CartesianGrid vertical={false} />
             <XAxis
               dataKey="month"
