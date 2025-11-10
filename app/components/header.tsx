@@ -47,7 +47,7 @@ export function Header({ children, cartCount }: { children: React.ReactElement<C
        
         {/* BUSCA */}
         <div className="flex items-center gap-4">
-          <Image src="/icons/search.svg" alt="Search" width={24} height={24} />
+          {/* <Image src="/icons/search.svg" alt="Search" width={24} height={24} /> */}
           {React.cloneElement(children, { cartCount })}
         </div>
 
