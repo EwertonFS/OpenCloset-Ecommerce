@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 // import { prisma } from "@/lib/prisma";
   export const navbarlinks = [
   { id: 0, name: 'Home', href: '/' },
-  { id: 1, name: 'All Products', href: '/productList' },
+  { id: 1, name: 'All Products', href: '/product' },
   // { id: 2, name: 'Mulher', href: '/products/women' },
 ];
 
