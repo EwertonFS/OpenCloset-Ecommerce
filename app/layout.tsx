@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { Anton, Poppins } from "next/font/google";
 import "./globals.css";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-import { prisma } from "@/lib/prisma";
 
 const anton = Anton({
   variable: "--font-anton",
@@ -28,7 +27,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const { getUser } = getKindeServerSession();
-  const user = await getUser();
+  // const user = await getUser();
 
   // if (user) {
   //   const dbUser = await prisma.user.findUnique({

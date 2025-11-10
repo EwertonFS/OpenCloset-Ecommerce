@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { unstable_noStore as noStore } from "next/cache";
 import { type Product, type Category, type Prisma } from "@prisma/client";
 import redis from "./redis";
+import { ProductWithCategory, SortOption } from "./types";
 
 // Helper function to generate a slug remover daqui 
 function generateSlug(name: string): string {
@@ -88,6 +89,7 @@ export async function getProductBySlug(slug: string) {
       variants: {
         include: {
           inventory: true,
+          color: true,
         },
       },
       category: true,
@@ -444,8 +446,6 @@ export async function deleteProduct(formData: FormData) {
   redirect("/dashboard/products");
 }
 
-export type ProductWithCategory = Product & { category: Category & { parent: Category | null } };
-
 export async function getFilterData() {
   noStore();
   const categories = await prisma.category.findMany({
@@ -486,13 +486,14 @@ export async function getFilterData() {
   };
 }
 
+
 interface FilteredProductsParams {
   categories?: string[];
   subcategories?: string[];
   sizes?: string[];
   colors?: string[];
   price?: [number, number] | null;
-  sort?: string;
+  sort?: SortOption;
 }
 
 export async function getFilteredProducts({
@@ -508,6 +509,26 @@ export async function getFilteredProducts({
   const where: Prisma.ProductWhereInput = {
     status: 'published',
   };
+
+  let orderBy: Prisma.ProductOrderByWithRelationInput = {};
+
+  switch (sort) {
+    case SortOption.PRICE_ASC:
+      orderBy = { price: 'asc' };
+      break;
+    case SortOption.PRICE_DESC:
+      orderBy = { price: 'desc' };
+      break;
+    case SortOption.POPULARITY:
+      // Implement popularity logic, e.g., based on orders or views
+      // For now, let's sort by creation date as a fallback
+      orderBy = { createdAt: 'desc' };
+      break;
+    case SortOption.NEWEST:
+    default:
+      orderBy = { createdAt: 'desc' };
+      break;
+  }
 
   if (subcategories && subcategories.length > 0) {
     where.category = { name: { in: subcategories } };
@@ -542,7 +563,8 @@ export async function getFilteredProducts({
     const variantWhere: Prisma.ProductVariantWhereInput = {};
 
     if (sizes && sizes.length > 0) {
-      variantWhere.size = { in: sizes as Size[] };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      variantWhere.size = { in: sizes as any };
     }
 
     if (colors && colors.length > 0) {
@@ -564,6 +586,7 @@ export async function getFilteredProducts({
         },
       },
     },
+    orderBy,
   });
   return products;
 }
@@ -775,7 +798,8 @@ export async function removeCartItem(formData: FormData) {
   const sku = formData.get('sku') as string;
 
   if (!sku) {
-    return { error: "SKU do produto é obrigatório." };
+    console.error("SKU do produto é obrigatório.");
+    return;
   }
 
   let cartKey: string;
@@ -786,7 +810,8 @@ export async function removeCartItem(formData: FormData) {
   } else {
     const visitorId = cookieStore.get('visitor_id')?.value;
     if (!visitorId) {
-      return { error: "Carrinho não encontrado." };
+      console.error("Carrinho não encontrado.");
+      return;
     }
     cartKey = `cart:${visitorId}`;
   }
@@ -814,14 +839,80 @@ export async function removeCartItem(formData: FormData) {
     await redis.set(cartKey, JSON.stringify(cart));
 
     revalidatePath("/");
-    return { success: "Produto removido da sacola!" };
   } catch (error) {
     console.error("Erro ao remover item do Redis:", error);
-    return { error: "Não foi possível remover o produto da sacola." };
   }
 }
 
-export async function updateCartItem() {
+export async function updateCartItem(formData: FormData) {
+  const { getUser } = getKindeServerSession();
+  const user = await getUser();
+
+  const sku = formData.get('sku') as string;
+  const quantity = Number(formData.get('quantity')); // This will be the new total quantity for the item
+
+  if (!sku) {
+    return { error: "SKU do produto é obrigatório." };
+  }
+  if (isNaN(quantity) || quantity <= 0) {
+    return { error: "Quantidade inválida." };
+  }
+
+  let cartKey: string;
+  const cookieStore = await cookies();
+
+  if (user && user.id) {
+    cartKey = `cart:${user.id}`;
+  } else {
+    const visitorId = cookieStore.get('visitor_id')?.value;
+    if (!visitorId) {
+      return { error: "Carrinho não encontrado para visitante." };
+    }
+    cartKey = `cart:${visitorId}`;
+  }
+
+  try {
+    const cartJson: string | null | Record<string, number> = await redis.get(cartKey);
+    let cart: Record<string, number> = {};
+
+    if (cartJson) {
+      if (typeof cartJson === 'string') {
+        if (cartJson !== "[object Object]") {
+          try {
+            cart = JSON.parse(cartJson);
+          } catch (error) {
+            console.error("Erro ao analisar JSON do carrinho em updateCartItem:", error);
+            return { error: "Erro ao carregar carrinho." };
+          }
+        }
+      } else if (typeof cartJson === 'object' && cartJson !== null) {
+        cart = cartJson;
+      }
+    }
+
+    if (!cart[sku]) {
+      return { error: "Produto não encontrado na sacola." };
+    }
+
+    const variant = await prisma.productVariant.findUnique({
+      where: { sku: sku },
+      include: { inventory: true },
+    });
+
+    if (!variant || !variant.inventory || quantity > variant.inventory.quantity) {
+      return { error: `Apenas ${variant?.inventory?.quantity ?? 0} unidades disponíveis para ${variant?.sku ?? 'este item'}.` };
+    }
+
+    cart[sku] = quantity;
+
+    await redis.set(cartKey, JSON.stringify(cart));
+
+    revalidatePath("/");
+    return { success: "Quantidade atualizada com sucesso!" };
+  } catch (error) {
+    console.error("Erro ao atualizar item no Redis:", error);
+    return { error: "Não foi possível atualizar a quantidade do produto." };
+  }
 }
 
 export async function clearCart() {
@@ -947,7 +1038,7 @@ export async function getUserAddresses() {
   return addresses;
 }
 
-export async function updateAddress(formData: FormData) {
+export async function updateAddress(prevState: { error: string } | void, formData: FormData) {
   const { getUser } = getKindeServerSession();
   const user = await getUser();
 

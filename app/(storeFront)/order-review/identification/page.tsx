@@ -2,39 +2,41 @@
 
 import Image from "next/image";
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { CheckoutSteps } from "@/app/components/CheckoutSteps";
 import { Separator } from "@/components/ui/separator";
 import FormAddress from "@/app/(storeFront)/order-review/identification/component/FormAddress";
 import { getCart, getUserAddresses, getDbUser } from "@/lib/action";
-import { type CartItem } from "@/lib/definitions";
-import { type User } from "@prisma/client";
-import { useRouter } from "next/navigation";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { formatCurrency } from "@/app/helpers";
 
-// Tipos
-type Address = {
-    id: string;
-    street: string;
-    number: string;
-    complement?: string | null;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
-    neighborhood: string;
-};
+import { type User, type Address } from "@prisma/client";
 
-type ShippingOption = {
+export interface ShippingOption {
     id: number;
     name: string;
     price: string;
     delivery_time: number;
-};
+}
+
+export interface CartItem {
+    sku: string;
+    name: string;
+    price: number;
+    quantity: number;
+    image: string;
+    lineTotal: number;
+    weight?: number;
+    width?: number;
+    height?: number;
+    length?: number;
+}
 
 const formatPrice = (price: number | string) => {
     const numericPrice = typeof price === 'string' ? parseFloat(price) : price;
+    if (isNaN(numericPrice)) {
+        return "0,00";
+    }
     return numericPrice.toFixed(2).replace(".", ",");
 };
 
@@ -143,7 +145,25 @@ export default function IdentificationPage() {
         }
     };
 
-    const handleCheckout = async (address: Address) => {
+    const handleAddressChange = (newAddress: Partial<Address>) => {
+        const updatedAddress = { ...(userAddress || {}), ...newAddress } as Address;
+        setUserAddress(updatedAddress);
+
+        if (newAddress.zipCode && newAddress.zipCode.length === 8 && newAddress.zipCode !== userAddress?.zipCode) {
+            if (updatedAddress.zipCode) {
+                calculateShipping(updatedAddress, cartItems);
+            }
+        }
+    };
+
+    const handleCheckout = async (address: Partial<Address>) => {
+        const fullAddress = { ...userAddress, ...address } as Address;
+
+        if (!fullAddress.street || !fullAddress.number || !fullAddress.district || !fullAddress.city || !fullAddress.state || !fullAddress.zipCode) {
+            alert("Por favor, preencha o endereço completo antes de prosseguir.");
+            return;
+        }
+        
         if (!dbUser?.cpf || !dbUser?.phone) {
             alert("Para continuar com o pagamento, por favor, vá até a sua área de usuário e cadastre seu CPF e Telefone.");
             return;
@@ -158,7 +178,7 @@ export default function IdentificationPage() {
             const response = await fetch('/api/checkout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ address, cart: cartItems, total, shipping: selectedShipping }),
+                body: JSON.stringify({ address: fullAddress, cart: cartItems, total, shipping: selectedShipping }),
             });
 
             const data = await response.json();
@@ -182,10 +202,9 @@ export default function IdentificationPage() {
                     {isLoading ? <p>Carregando dados...</p> : (
                         <FormAddress
                             address={userAddress}
-                            cart={cartItems}
-                            total={total}
                             onCheckout={handleCheckout}
                             isSubmitting={isSubmitting}
+                            onAddressChange={handleAddressChange}
                         />
                     )}
                 </div>
@@ -205,7 +224,7 @@ export default function IdentificationPage() {
                                                 <p className="font-medium">{item.name}</p>
                                                 <p className="text-sm text-gray-500">Qtd: {item.quantity}</p>
                                             </div>
-                                            <p className="font-semibold">{formatCurrency(item.price)}</p>
+                                            <p className="font-semibold">{formatPrice(item.price)}</p>
                                         </div>
                                     ))}
                                 </div>
@@ -215,7 +234,7 @@ export default function IdentificationPage() {
                                 <div className="space-y-3">
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-600">Subtotal = total de items</span>
-                                        <span className="font-medium">{formatCurrency(subtotal)}</span>
+                                        <span className="font-medium">{formatPrice(subtotal)}</span>
                                     </div>
 
                                     <div className="text-sm">
@@ -241,7 +260,7 @@ export default function IdentificationPage() {
 
                                     <div className="flex justify-between font-bold text-lg mt-2">
                                         <span>Total</span>
-                                        <span>{formatCurrency(total)}</span>
+                                        <span>{formatPrice(total)}</span>
                                     </div>
                                 </div>
                             </>

@@ -23,10 +23,12 @@ interface PersonalDetailsFormProps {
 }
 
 export function PersonalDetailsForm({ user }: PersonalDetailsFormProps) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [state, formAction] = useActionState(updateUserPersonalDetails, {
     success: false,
     error: null,
-  });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } as any);
 
   useEffect(() => {
     if (state.success) {
@@ -35,7 +37,7 @@ export function PersonalDetailsForm({ user }: PersonalDetailsFormProps) {
     if (state.error) {
         const errorMessages = Object.values(state.error).flat();
         errorMessages.forEach(message => {
-            toast.error(message);
+            toast.error(String(message));
         });
     }
   }, [state]);

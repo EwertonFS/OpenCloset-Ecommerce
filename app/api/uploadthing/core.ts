@@ -18,7 +18,7 @@ export const ourFileRouter = {
     },
   })
     // Set permissions and file types for this FileRoute
-    .middleware(async ({ req }) => {
+    .middleware(async () => {
       // Pegando ususario do kinde
       const { getUser } = getKindeServerSession();
 
@@ -53,7 +53,7 @@ export const ourFileRouter = {
     },
   })
     // Set permissions and file types for this FileRoute
-    .middleware(async ({ req }) => {
+    .middleware(async () => {
       // Pegando ususario do kinde
       const { getUser } = getKindeServerSession();
 

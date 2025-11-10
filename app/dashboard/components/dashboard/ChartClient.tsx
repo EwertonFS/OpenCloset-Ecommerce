@@ -47,10 +47,7 @@ export function ChartClient({ chartData }: ChartClientProps) {
               axisLine={false}
               tickFormatter={(value) => value.slice(0, 3)}
             />
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent hideLabel />}
-            />
+            <ChartTooltip cursor={false} hideLabel />
             <Bar dataKey="desktop" fill="var(--color-desktop)" radius={8} />
           </BarChart>
         </ChartContainer>

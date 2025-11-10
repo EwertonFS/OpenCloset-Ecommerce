@@ -12,7 +12,8 @@ export default async function UserLayout({
 
     return (
         <div className="flex">
-            <UserSidebar user={user} />
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            <UserSidebar user={user as any} />
             <main className="flex-1 p-8">
                 {children}
             </main>

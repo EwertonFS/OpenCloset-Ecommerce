@@ -18,7 +18,7 @@ interface Address {
 
 interface AddressFormProps {
   address: Address | null;
-  onSaveAction: (prevState: { error: string }, formData: FormData) => Promise<{ error: string } | void>;
+  onSaveAction: (prevState: { error: string } | void, formData: FormData) => Promise<{ error: string } | void>;
   redirectUrl: string;
 }
 

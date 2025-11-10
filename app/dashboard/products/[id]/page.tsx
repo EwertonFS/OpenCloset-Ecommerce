@@ -45,6 +45,15 @@ export default async function EditRoute({
             },
           },
           imageUrl: true,
+          dimensions: {
+            select: {
+              id: true,
+              width: true,
+              height: true,
+              length: true,
+              weight: true,
+            },
+          },
         },
       },
     },

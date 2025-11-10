@@ -2,7 +2,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { type Product, type ProductVariant, type Inventory } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { AddCartItem } from "@/lib/action";
 import { SizeSelector } from "./SizeSelector";
 import { toast, Toaster } from "sonner";
@@ -10,18 +10,24 @@ import Image from "next/image";
 import { Dialog, DialogContent, DialogPortal, DialogTitle } from "@/components/ui/dialog";
 import { formatCurrency } from "@/app/helpers";
 
-interface ProductFormProps {
-  product: Product & {
-    variants: (ProductVariant & {
-      inventory: Inventory | null;
-      color: Color;
-    })[];
+type ProductWithVariants = Prisma.ProductGetPayload<{
+  include: {
+    variants: {
+      include: {
+        inventory: true;
+        color: true;
+      };
+    };
   };
+}>;
+
+interface ProductFormProps {
+  product: ProductWithVariants;
   setSelectedImage: (image: string) => void;
 }
 
 function ColorSelector({ variants, selectedColor, onColorSelect, onImageClick }: {
-  variants: (ProductVariant & { color: Color })[];
+  variants: ProductWithVariants['variants'];
   selectedColor: string | null;
   onColorSelect: (color: string) => void;
   onImageClick: (imageUrl: string) => void;

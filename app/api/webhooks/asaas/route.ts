@@ -29,6 +29,13 @@ interface CartItem {
   variantId?: string;
 }
 
+interface OrderItem {
+  id: string;
+  quantity: number;
+  price: number;
+  variantId: string;
+}
+
 interface CheckoutAddress {
   id: string;
   street: string;
@@ -54,6 +61,11 @@ interface Checkout {
   cart: CartItem[];
   address: CheckoutAddress;
   paymentProviderData: PaymentProviderData;
+}
+
+interface Order {
+  id: string;
+  items: OrderItem[];
 }
 
 // Interfaces do Melhor Envio
@@ -91,8 +103,7 @@ interface MelhorEnvioPurchase {
 
 export async function POST(request: Request) {
   const headersList = await headers();
-  const signature = headersList.get('Asaas-Signature');
-  
+//  const signature = headersList.get('Asaas-Signature');
   // const isVerified = await verifyAsaasSignature(signature);
   // if (!isVerified) {
   //   return NextResponse.json({ message: 'Não autorizado: assinatura inválida' }, { status: 401 });
@@ -156,17 +167,13 @@ export async function POST(request: Request) {
                 include: {
                   items: true,
                 }
-            });
+            }) as Order;
 
               for (const item of order.items) {
-                  const variant = await tx.productVariant.findUniqueOrThrow({
-                      where: { sku: (checkout.cart as CartItem[]).find(c => c.sku === item.variantId)?.sku },
-                      select: { id: true }
-                  });
           
                   const inventoryUpdate = await tx.inventory.updateMany({
                       where: {
-                          variantId: variant.id,
+                          variantId: item.variantId,
                           quantity: {
                               gte: item.quantity,
                           },
@@ -187,7 +194,7 @@ export async function POST(request: Request) {
                       type: 'OUT',
                       quantity: item.quantity,
                       notes: `Venda - Pedido #${order.id}`,
-                      variantId: variant.id,
+                      variantId: item.variantId,
                     }
                   });
               }
@@ -206,7 +213,8 @@ export async function POST(request: Request) {
         console.log(`Iniciando geração de etiqueta para o pedido ${newOrder.id}`);
         
         // 1. Adicionar ao carrinho
-        const cartItem = await addToCart(newOrder);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const cartItem = await addToCart(newOrder as any) as { id: string };
         console.log(`Pedido ${newOrder.id} adicionado ao carrinho do Melhor Envio com ID: ${cartItem.id}`);
 
         // 2. Comprar a etiqueta
@@ -223,9 +231,9 @@ export async function POST(request: Request) {
         // 4. Obter URL de impressão
         // O objeto 'generated' tem a 'generate_key' e os IDs dos pedidos como chaves.
         // Filtramos para obter apenas os IDs dos pedidos.
-        const orderIdsToPrint = Object.keys(generated).filter(key => key !== 'generate_key');
-        
-        const printInfo = await getLabelPrintUrl(orderIdsToPrint);
+        const orderIdsToPrint = Object.keys(generated as object).filter(key => key !== 'generate_key');
+
+        const printInfo = await getLabelPrintUrl(orderIdsToPrint) as { url: string };
         const labelUrl = printInfo.url; // Correção: Acessar a URL diretamente do objeto
 
         // Extrair o código de rastreio da resposta da compra
@@ -272,18 +280,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: 'Webhook recebido com sucesso' }, { status: 200 });
 
   } catch (error: unknown) {
+    console.error('Erro ao processar o webhook do Asaas:', error);
     if (error instanceof Error) {
-      console.error('Erro ao processar o webhook do Asaas:', error);
-      return NextResponse.json({ 
-        message: 'Erro interno do servidor', 
-        error: error.message 
+      return NextResponse.json({
+        message: 'Erro interno do servidor',
+        error: error.message
       }, { status: 500 });
     }
     // Se não for um Error conhecido, registra o erro como está
-    console.error('Erro desconhecido ao processar webhook:', error);
-    return NextResponse.json({ 
-      message: 'Erro interno do servidor', 
-      error: 'Erro desconhecido' 
+    return NextResponse.json({
+      message: 'Erro interno do servidor',
+      error: 'Erro desconhecido'
     }, { status: 500 });
   }
 };

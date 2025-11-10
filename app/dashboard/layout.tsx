@@ -4,12 +4,7 @@ import { redirect } from 'next/navigation';
 import { UserNav } from './components/dashboard/UserNav';
 import { MobileNav } from './components/dashboard/MobileNav';
 
-const links = [
-  { name: 'Dashboard', href: '/dashboard' },
-  { name: 'Orders', href: '/dashboard/orders' },
-  { name: 'Products', href: '/dashboard/products' },
-  { name: 'Categories', href: '/dashboard/categories' },
-];
+
 
 const DashboardLayout = async ({ children }: { children: React.ReactNode }) => {
   const { getUser } = getKindeServerSession();

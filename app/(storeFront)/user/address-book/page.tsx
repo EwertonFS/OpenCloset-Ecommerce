@@ -12,11 +12,12 @@ interface Address {
     id: string;
     street: string;
     number: string;
-    complement?: string;
+    complement?: string | null;
     district: string;
     city: string;
     state: string;
     zipCode: string;
+    country: string;
 }
 
 export default function AddressBookPage() {

@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useMemo } from 'react';
-import { getFilteredProducts, getFilterData, type ProductWithCategory } from '@/lib/action';
+import { getFilteredProducts, getFilterData } from '@/lib/action';
+import { type ProductWithCategory, SortOption } from '@/lib/types';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import ProductCard from './ProductCard';
 
@@ -9,7 +10,7 @@ import { type Category, type Color } from '@prisma/client';
 import { ProductFilters } from './ProductFilters';
 
 interface FilterData {
-  categories: (Category & { subcategories: { name: string }[] })[];
+  categories: (Category & { subcategories: { id: string; name: string }[] })[];
   colors: Color[];
   sizes: string[];
   priceRange: { min: number; max: number };
@@ -40,13 +41,17 @@ export default function ProductListPage() {
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
+      const sortOption: SortOption = (['newest','price_asc','price_desc','popularity'].includes(selectedFilters.sort)
+    ? (selectedFilters.sort as SortOption)
+    : SortOption.NEWEST);
+
       const fetchedProducts = await getFilteredProducts({
         categories: selectedFilters.categories,
         subcategories: selectedFilters.subcategories,
         sizes: selectedFilters.sizes,
         colors: selectedFilters.colors,
         price: selectedFilters.price as [number, number] | null,
-        sort: selectedFilters.sort,
+        sort: sortOption,
       });
       setProducts(fetchedProducts);
       setLoading(false);
@@ -72,7 +77,7 @@ export default function ProductListPage() {
         params.set(key, value.join(','));
       }
       else if (Array.isArray(value) && value.length > 0) {
-        value.forEach(v => params.append(key, v));
+        value.forEach(v => params.append(key, String(v)));
       } else if (typeof value === 'string' && value) {
         params.set(key, value);
       }

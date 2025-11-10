@@ -71,7 +71,6 @@ export function SalesChart() {
           <PieChart>
             <ChartTooltip
               cursor={false}
-              content={<ChartTooltipContent hideLabel />}
             />
             <Pie
               data={chartData}

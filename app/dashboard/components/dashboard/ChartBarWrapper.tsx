@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import React from 'react';
 
 const ChartBarDefault = dynamic(
-  () => import('./ChartBarDefault').then((mod) => mod.ChartBarDefault),
+  () => import('./ChartBarDefault'),
   {
     ssr: false,
     loading: () => <p>Loading chart...</p>,
@@ -16,5 +16,9 @@ interface ChartBarWrapperProps {
 }
 
 export function ChartBarWrapper({ salesData }: ChartBarWrapperProps) {
-  return <ChartBarDefault salesData={salesData} />;
+  const chartData = salesData.map((item) => ({
+    month: item.month,
+    desktop: item.sales,
+  }));
+  return <ChartBarDefault data={chartData} />;
 }

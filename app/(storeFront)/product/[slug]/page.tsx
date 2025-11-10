@@ -2,6 +2,7 @@ import Image from "next/image";
 import { prisma } from "@/lib/prisma"; // Import prisma client
 import { notFound } from "next/navigation"; // Import notFound for handling missing products
 import { ProductView } from "./ProductView";
+import { Prisma } from "@prisma/client";
 interface ProductPageProps {
   params: {
     slug: string;
@@ -10,6 +11,10 @@ interface ProductPageProps {
 
 export default async function ProductPage({ params: initialParams }: ProductPageProps) {
   const params = await initialParams;
+ // Add this import
+
+// ...
+
   const product = await prisma.product.findUnique({
     where: {
       slug: params.slug,
@@ -22,7 +27,16 @@ export default async function ProductPage({ params: initialParams }: ProductPage
         },
       },
     },
- })
+ }) as Prisma.ProductGetPayload<{
+    include: {
+      variants: {
+        include: {
+          inventory: true;
+          color: true;
+        };
+      };
+    };
+  }>;
   if (!product) {
     notFound();
   }

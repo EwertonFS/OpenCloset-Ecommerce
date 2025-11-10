@@ -2,7 +2,7 @@ import React from "react";
 import { Check } from "lucide-react";
 
 interface CheckoutStepsProps {
-  currentStep: "identification" | "payment";
+  currentStep: "identification" | "payment" | "confirmation";
 }
 
 export function CheckoutSteps({ currentStep }: CheckoutStepsProps) {

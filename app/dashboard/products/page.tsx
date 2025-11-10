@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/table';
 import { prisma } from '@/lib/prisma';
 import { DropdownMenuSeparator } from '@radix-ui/react-dropdown-menu';
-import { MoreHorizontal, PlusCircle, UserIcon } from 'lucide-react';
+import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 

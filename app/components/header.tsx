@@ -19,7 +19,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 
-export function Header({ children, cartCount }: { children: ReactNode, cartCount: number }) {
+interface CartWrapperProps {
+  cartCount?: number;
+}
+
+export function Header({ children, cartCount }: { children: React.ReactElement<CartWrapperProps>, cartCount: number }) {
   const { isAuthenticated, user } = useKindeBrowserClient();
 
   return (
@@ -44,7 +48,7 @@ export function Header({ children, cartCount }: { children: ReactNode, cartCount
         {/* BUSCA */}
         <div className="flex items-center gap-4">
           <Image src="/icons/search.svg" alt="Search" width={24} height={24} />
-          {React.cloneElement(children as React.ReactElement, { cartCount })}
+          {React.cloneElement(children, { cartCount })}
         </div>
 
          {/* USUARIO */}

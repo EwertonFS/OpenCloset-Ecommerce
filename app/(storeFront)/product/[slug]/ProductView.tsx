@@ -1,12 +1,23 @@
 'use client'
 
-import { Product, ProductVariant } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { useState } from "react";
 import { ProductImageGallery } from "./ProductImageGallery";
 import { ProductForm } from "./ProductForm";
 
+type ProductWithVariants = Prisma.ProductGetPayload<{
+  include: {
+    variants: {
+      include: {
+        inventory: true;
+        color: true;
+      };
+    };
+  };
+}>;
+
 interface ProductViewProps {
-  product: Product & { variants: ProductVariant[] };
+  product: ProductWithVariants;
 }
 
 export function ProductView({ product }: ProductViewProps) {

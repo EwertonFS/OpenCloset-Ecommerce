@@ -6,7 +6,6 @@ import {
   PolarGrid,
   RadialBar,
   RadialBarChart as RadialBarChartPrimitive,
-  type RadialBarProps,
   Tooltip,
   type TooltipProps,
 } from "recharts"
@@ -17,23 +16,17 @@ import {
   BarChart as BarChartPrimitive,
   CartesianGrid,
   Cell,
-  type CellProps,
   Legend,
   type LegendProps,
   Line,
   LineChart as LineChartPrimitive,
   Pie,
   PieChart as PieChartPrimitive,
-  type PieProps,
   PolarAngleAxis,
-  type PolarAngleAxisProps,
   PolarRadiusAxis,
-  type PolarRadiusAxisProps,
   Rectangle,
-  type RectangleProps,
   ResponsiveContainer,
   Sector,
-  type SectorProps,
   XAxis,
   YAxis,
 } from "recharts"
@@ -45,10 +38,11 @@ const ChartContainer = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & {
     config: ChartConfig
-    children: React.ReactElement<"svg"> | React.ReactNode
+    children: React.ReactElement | React.ReactNode
   }
 >(({ id, className, children, config, ...props }, ref) => {
-  const chartId = `chart-${id || React.useId()}`
+  const generatedChartId = React.useId()
+  const chartId = `chart-${id || generatedChartId}`
   const [activeChart, setActiveChart] = React.useState<keyof typeof config>()
 
   return (
@@ -69,7 +63,7 @@ const ChartContainer = React.forwardRef<
           setActiveChart,
         }}
       >
-        <ResponsiveContainer>{children}</ResponsiveContainer>
+        <ResponsiveContainer>{children as React.ReactElement}</ResponsiveContainer>
       </ChartContext.Provider>
     </div>
   )
@@ -99,10 +93,11 @@ function useChart() {
 // Chart Tooltip
 const ChartTooltip = React.forwardRef<
   HTMLDivElement,
-  Omit<TooltipProps<unknown, unknown>, "content"> & {
+  Omit<TooltipProps<number, string>, "content" | "className"> & {
     hideIndicator?: boolean
     indicator?: "line" | "dot" | "dashed"
     hideLabel?: boolean
+    className?: string
   }
 >(
   (
@@ -119,7 +114,7 @@ const ChartTooltip = React.forwardRef<
 
     return (
       <Tooltip
-        wrapperstyle={{ outline: "none" }}
+        wrapperStyle={{ outline: "none" }}
         cursor={
           hideIndicator
             ? false
@@ -227,10 +222,15 @@ type ChartTooltipContentProps = React.ComponentProps<"div"> & {
   indicator?: "line" | "dot" | "dashed"
   hideLabel?: boolean
   hideIndicator?: boolean
-  name?: string
-  label?: string
-  color?: string
-  payload?: unknown[]
+  payload?: Array<{
+    dataKey?: string
+    name?: string
+    value?: number | string
+    unit?: string
+    payload?: {
+      date?: string
+    }
+  }>
 }
 
 const ChartTooltipContent = React.forwardRef<
@@ -244,9 +244,6 @@ const ChartTooltipContent = React.forwardRef<
       indicator = "dot",
       hideLabel = false,
       hideIndicator = false,
-      name,
-      label,
-      color,
       payload,
       ...props
     },
@@ -274,9 +271,9 @@ const ChartTooltipContent = React.forwardRef<
         {!hideLabel && (
           <div className="grid gap-1.5">
             <div className="font-semibold capitalize">
-              {label || item.name}
+              {chart?.label || item.name}
             </div>
-            {item.payload.date && (
+            {item.payload?.date && (
               <div className="text-muted-foreground">
                 {item.payload.date}
               </div>
@@ -293,6 +290,7 @@ const ChartTooltipContent = React.forwardRef<
     )
   }
 )
+ChartTooltipContent.displayName = "ChartTooltipContent"
 
 const Chart = Object.assign(ChartContainer, {
   Container: ChartContainer,

@@ -5,35 +5,27 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-// Estrutura do Endereço
-interface Address {
-  street: string;
-  number: string;
-  complement?: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  district: string;
-}
+import { type Address } from '@prisma/client';
 
 interface FormAddressProps {
-  address: (Address & { id?: string, country?: string }) | null;
-  onCheckout: (address: Address) => Promise<void>;
+  address: Address | null;
+  onCheckout: (address: Partial<Address>) => Promise<void>;
   isSubmitting: boolean;
-  onAddressChange: (address: Address) => void; // Nova prop
+  onAddressChange: (address: Partial<Address>) => void;
 }
 
 // Componente do formulário de endereço
-const AddressForm = ({ onSave, onCancel, initialData, isSubmitting, onAddressChange }: { onSave: (newAddress: Address) => void, onCancel: () => void, initialData: Address | null, isSubmitting: boolean, onAddressChange: (address: Address) => void }) => {
-    const [address, setAddress] = useState<Address>(initialData || {
+const AddressForm = ({ onSave, onCancel, initialData, isSubmitting, onAddressChange }: { onSave: (newAddress: Partial<Address>) => void, onCancel: () => void, initialData: Address | null, isSubmitting: boolean, onAddressChange: (address: Partial<Address>) => void }) => {
+    const [address, setAddress] = useState<Partial<Address>>(initialData || {
+        id: '',
         street: '',
         number: '',
         complement: '',
         district: '',
         city: '',
         state: '',
-        zipCode: ''
+        zipCode: '',
+        country: 'Brasil'
     });
 
     useEffect(() => {
@@ -127,7 +119,7 @@ const AddressForm = ({ onSave, onCancel, initialData, isSubmitting, onAddressCha
 export default function FormAddress({ address: initialAddress, onCheckout, isSubmitting, onAddressChange }: FormAddressProps) {
   const [choice, setChoice] = useState(initialAddress ? 'existing' : 'new');
 
-  const handleSaveAndContinue = (newAddress: Address) => {
+  const handleSaveAndContinue = (newAddress: Partial<Address>) => {
     onCheckout(newAddress);
   };
 

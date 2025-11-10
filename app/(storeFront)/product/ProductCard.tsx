@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { type ProductWithCategory } from "@/lib/action";
+import { type ProductWithCategory } from "@/lib/types";
 import { formatCurrency } from "@/app/helpers";
 
 interface ProductCardProps {
