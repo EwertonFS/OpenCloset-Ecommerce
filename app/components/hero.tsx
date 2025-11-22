@@ -4,8 +4,8 @@ import { prisma } from '@/lib/prisma';
 
 const getData = async () => {
   const data = await prisma.banner.findMany({
-    orderBy:{
-      createdAt:'desc'
+    orderBy: {
+      createdAt: 'desc'
     }
   });
   return data;
@@ -32,7 +32,7 @@ const Hero = async () => {
   }
 
   return (
-   <Carousel>
+    <Carousel>
       <CarouselContent>
         {data.map((item) => (
           <CarouselItem key={item.id}>
@@ -41,9 +41,10 @@ const Hero = async () => {
                 alt="Banner Image"
                 src={item.imageString}
                 fill
-                className="h-full w-full rounded-xl object-cover"
+                className="h-full w-full object-contain md:object-cover rounded-xl"
+                priority
               />
-              <div className="absolute top-6 left-6 transform rounded-xl bg-black/75 p-6 text-white shadow-lg transition-transform hover:scale-105">
+              <div className="absolute top-4 left-4 md:top-6 md:left-6 transform rounded-xl bg-black/75 p-4 md:p-6 text-white shadow-lg transition-transform hover:scale-105">
                 <h1 className="text-xl font-bold lg:text-4xl">{item.title}</h1>
               </div>
             </div>

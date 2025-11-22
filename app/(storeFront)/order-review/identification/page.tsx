@@ -61,18 +61,18 @@ export default function IdentificationPage() {
 
         setIsCalculatingShipping(true);
         try {
-           
 
-//             const products = cart.map(item => ({
-//     id: item.sku, // Usando o SKU como ID único
-//     weight: item.weight || 0.1,
-//     width: item.width || 15,
-//     height: item.height || 15,
-//     length: item.length || 15,
-//     quantity: item.quantity,
-// }));
 
-            
+            //             const products = cart.map(item => ({
+            //     id: item.sku, // Usando o SKU como ID único
+            //     weight: item.weight || 0.1,
+            //     width: item.width || 15,
+            //     height: item.height || 15,
+            //     length: item.length || 15,
+            //     quantity: item.quantity,
+            // }));
+
+
             const response = await fetch('/api/shipping', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -132,10 +132,14 @@ export default function IdentificationPage() {
         fetchData();
     }, [router, calculateShipping]);
 
+    const isAracaju = userAddress?.city?.trim().toLowerCase() === 'aracaju';
+
     useEffect(() => {
-        const newTotal = subtotal + shippingCost;
+        // Se for Aracaju, o frete não é cobrado no checkout online
+        const shippingToAdd = isAracaju ? 0 : shippingCost;
+        const newTotal = subtotal + shippingToAdd;
         setTotal(newTotal);
-    }, [subtotal, shippingCost]);
+    }, [subtotal, shippingCost, isAracaju]);
 
     const handleShippingChange = (value: string) => {
         const selected = shippingOptions.find(option => option.id.toString() === value);
@@ -149,9 +153,17 @@ export default function IdentificationPage() {
         const updatedAddress = { ...(userAddress || {}), ...newAddress } as Address;
         setUserAddress(updatedAddress);
 
+        // Recalcula frete apenas se não for Aracaju e tiver CEP válido
+        const cityIsAracaju = updatedAddress.city?.trim().toLowerCase() === 'aracaju';
+
         if (newAddress.zipCode && newAddress.zipCode.length === 8 && newAddress.zipCode !== userAddress?.zipCode) {
-            if (updatedAddress.zipCode) {
+            if (updatedAddress.zipCode && !cityIsAracaju) {
                 calculateShipping(updatedAddress, cartItems);
+            } else if (cityIsAracaju) {
+                // Limpa opções de frete se mudou para Aracaju
+                setShippingOptions([]);
+                setSelectedShipping(null);
+                setShippingCost(0);
             }
         }
     };
@@ -163,12 +175,15 @@ export default function IdentificationPage() {
             alert("Por favor, preencha o endereço completo antes de prosseguir.");
             return;
         }
-        
+
         if (!dbUser?.cpf || !dbUser?.phone) {
             alert("Para continuar com o pagamento, por favor, vá até a sua área de usuário e cadastre seu CPF e Telefone.");
             return;
         }
-        if (!selectedShipping) {
+
+        // Validação de frete apenas se NÃO for Aracaju
+        const currentIsAracaju = fullAddress.city?.trim().toLowerCase() === 'aracaju';
+        if (!selectedShipping && !currentIsAracaju) {
             alert("Por favor, selecione uma opção de frete.");
             return;
         }
@@ -178,7 +193,12 @@ export default function IdentificationPage() {
             const response = await fetch('/api/checkout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ address: fullAddress, cart: cartItems, total, shipping: selectedShipping }),
+                body: JSON.stringify({
+                    address: fullAddress,
+                    cart: cartItems,
+                    total,
+                    shipping: currentIsAracaju ? { price: "0" } : selectedShipping
+                }),
             });
 
             const data = await response.json();
@@ -239,22 +259,33 @@ export default function IdentificationPage() {
 
                                     <div className="text-sm">
                                         <span className="text-gray-600">Frete</span>
-                                        {isCalculatingShipping ? <p className="font-medium">Calculando...</p> : (
-                                            shippingOptions.length > 0 ? (
-                                                <RadioGroup value={selectedShipping?.id.toString()} onValueChange={handleShippingChange} className="mt-2">
-                                                    {shippingOptions.map((option) => (
-                                                        <div key={option.id} className="flex items-center justify-between">
-                                                            <div className="flex items-center space-x-2">
-                                                                <RadioGroupItem value={option.id.toString()} id={option.id.toString()} />
-                                                                <Label htmlFor={option.id.toString()} className="font-normal">
-                                                                    {option.name} - até {option.delivery_time} dias úteis
-                                                                </Label>
+                                        {isAracaju ? (
+                                            <div className="mt-2 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm">
+                                                <p className="font-medium mb-1">Entrega em Aracaju</p>
+                                                <p>
+                                                    A taxa de entrega será cobrada de acordo com o valor da empresa de envio.
+                                                    Entraremos em contato via WhatsApp para definir o horário de entrega.
+                                                    <strong> Este valor não será cobrado agora.</strong>
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            isCalculatingShipping ? <p className="font-medium">Calculando...</p> : (
+                                                shippingOptions.length > 0 ? (
+                                                    <RadioGroup value={selectedShipping?.id.toString()} onValueChange={handleShippingChange} className="mt-2">
+                                                        {shippingOptions.map((option) => (
+                                                            <div key={option.id} className="flex items-center justify-between">
+                                                                <div className="flex items-center space-x-2">
+                                                                    <RadioGroupItem value={option.id.toString()} id={option.id.toString()} />
+                                                                    <Label htmlFor={option.id.toString()} className="font-normal">
+                                                                        {option.name} - até {option.delivery_time} dias úteis
+                                                                    </Label>
+                                                                </div>
+                                                                <span className="font-medium">R$ {formatPrice(option.price)}</span>
                                                             </div>
-                                                            <span className="font-medium">R$ {formatPrice(option.price)}</span>
-                                                        </div>
-                                                    ))}
-                                                </RadioGroup>
-                                            ) : <p className="font-medium">Nenhuma opção de frete disponível.</p>
+                                                        ))}
+                                                    </RadioGroup>
+                                                ) : <p className="font-medium">Nenhuma opção de frete disponível.</p>
+                                            )
                                         )}
                                     </div>
 

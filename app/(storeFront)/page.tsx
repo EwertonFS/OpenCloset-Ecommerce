@@ -5,14 +5,14 @@ import Hero from "../components/hero";
 
 
 const Home = () => {
-    return ( 
-    <main className="gap-y-4 px-11" >
-        <Hero/>
-        <Brands />
-        <BestSellers />
-        <Promotions />
-     </main> 
+    return (
+        <main className="flex flex-col gap-y-8 md:gap-y-12 w-full" >
+            <Hero />
+            <Brands />
+            <BestSellers />
+            <Promotions />
+        </main>
     );
 }
- 
+
 export default Home;

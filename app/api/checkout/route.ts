@@ -137,7 +137,7 @@ export async function POST(request: Request) {
             console.error(`Falha ao buscar ou converter imagem ${item.image}:`, error);
           }
         }
-        
+
         const asaasItem: AsaasItem = {
           name: item.name.substring(0, 30),
           quantity: item.quantity,
@@ -189,7 +189,7 @@ export async function POST(request: Request) {
     });
 
     const checkoutResponseText = await checkoutResponse.text();
-    
+
     if (!checkoutResponse.ok) {
       console.error("Erro ao criar checkout no Asaas:", checkoutResponseText);
       return NextResponse.json({ error: "Erro ao criar checkout", details: checkoutResponseText }, { status: checkoutResponse.status });

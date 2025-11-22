@@ -4,9 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 // import { prisma } from "@/lib/prisma";
-  export const navbarlinks = [
-  { id: 0, name: 'Home', href: '/' },
-  { id: 1, name: 'All Products', href: '/product' },
+export const navbarlinks = [
+  { id: 0, name: 'Início', href: '/' },
+  { id: 1, name: 'Produtos', href: '/product' },
   // { id: 2, name: 'Mulher', href: '/products/women' },
 ];
 
@@ -27,21 +27,21 @@ export function NavbarLinks() {
     <nav className="flex justify-center items-center py-4">
       <ul className="flex gap-8">
         <li>
-         {navbarlinks.map((item) => (
-           <Link
-           key={item.id}
-            href={item.href}
-            className={cn(
-            location === item.href
-              ? 'bg-muted'
-              : 'hover:bg-muted hover:backdrop-opacity-75',
-            'group rounded-md p-2 font-medium',
-          )}
-    
-          >
-         {item.name}
-          </Link>
-         ))}
+          {navbarlinks.map((item) => (
+            <Link
+              key={item.id}
+              href={item.href}
+              className={cn(
+                location === item.href
+                  ? 'bg-muted'
+                  : 'hover:bg-muted hover:backdrop-opacity-75',
+                'group rounded-md p-2 font-medium',
+              )}
+
+            >
+              {item.name}
+            </Link>
+          ))}
         </li>
         {/* {categories.map((category) => (
           <li key={category.id}>

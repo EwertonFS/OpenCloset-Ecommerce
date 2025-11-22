@@ -37,6 +37,8 @@ npx prisma db push --force-reset
 
 ngrok http 3000
 
+npx prisma generate
+
 
 - Renomear coluna de produtos para quantidade acionada
 - Cadastrar produtos corretamentes

@@ -4,7 +4,7 @@ import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { redirect } from "next/navigation";
 import { addressSchema, bannerSchema, productSchema, personalDetailsSchema } from "./zodSchema";
 import { revalidatePath } from "next/cache";
-import {prisma} from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { v4 as uuidv4 } from 'uuid';
 import { unstable_noStore as noStore } from "next/cache";
@@ -199,7 +199,7 @@ export async function createProduct(formData: FormData) {
 
         const inputColor = color.toLowerCase();
         const canonicalName = aliasMap[inputColor] || inputColor;
-        const hexCode = canonicalColorMap[canonicalName] || `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`;
+        const hexCode = canonicalColorMap[canonicalName] || `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`;
 
         const colorRecord = await tx.color.upsert({
           where: { name: canonicalName },
@@ -319,7 +319,7 @@ export async function editProduct(formData: FormData) {
 
         const inputColor = color.toLowerCase();
         const canonicalName = aliasMap[inputColor] || inputColor;
-        const hexCode = canonicalColorMap[canonicalName] || `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`;
+        const hexCode = canonicalColorMap[canonicalName] || `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`;
 
         const colorRecord = await tx.color.upsert({
           where: { name: canonicalName },
@@ -460,7 +460,27 @@ export async function getFilterData() {
     },
   });
 
-  const colors = await prisma.color.findMany();
+  const colors = await prisma.color.findMany({
+    where: {
+      variants: {
+        some: {}
+      }
+    },
+    orderBy: {
+      name: 'asc'
+    }
+  });
+
+  // Deduplicate colors by name (case-insensitive) to avoid visual duplicates
+  const uniqueColors = [];
+  const seenNames = new Set();
+  for (const color of colors) {
+    const normalized = color.name.toLowerCase().trim();
+    if (!seenNames.has(normalized)) {
+      seenNames.add(normalized);
+      uniqueColors.push(color);
+    }
+  }
 
   const productVariants = await prisma.productVariant.findMany({
     select: {
@@ -477,11 +497,11 @@ export async function getFilterData() {
 
   return {
     categories: categories.map(c => ({ ...c, subcategories: c.children })), // Mapeia para a interface esperada
-    colors,
+    colors: uniqueColors,
     sizes,
     priceRange: {
-      min: Math.floor((priceAggregate._min.price ?? 0) / 100),
-      max: Math.ceil((priceAggregate._max.price ?? 0) / 100),
+      min: 1,
+      max: 1000,
     },
   };
 }
@@ -505,7 +525,7 @@ export async function getFilteredProducts({
   sort,
 }: FilteredProductsParams): Promise<ProductWithCategory[]> {
   noStore();
-  
+
   const where: Prisma.ProductWhereInput = {
     status: 'published',
   };
@@ -534,16 +554,16 @@ export async function getFilteredProducts({
     where.category = { name: { in: subcategories } };
   } else if (categories && categories.length > 0) {
     const subcategoriesOfSelectedCategories = await prisma.category.findMany({
-        where: {
-            parent: {
-                name: {
-                    in: categories
-                }
-            }
-        },
-        select: {
-            name: true
+      where: {
+        parent: {
+          name: {
+            in: categories
+          }
         }
+      },
+      select: {
+        name: true
+      }
     });
     const subcategoryNames = subcategoriesOfSelectedCategories.map(c => c.name);
     const allCategoryNames = [...subcategoryNames, ...categories];
@@ -553,8 +573,8 @@ export async function getFilteredProducts({
 
   if (price) {
     where.price = {
-      gte: price[0] * 100,
-      lte: price[1] * 100,
+      gte: price[0],
+      lte: price[1],
     };
   }
 
@@ -588,6 +608,7 @@ export async function getFilteredProducts({
     },
     orderBy,
   });
+
   return products;
 }
 
@@ -958,13 +979,13 @@ export async function getDbUser() {
   if (!dbUser) {
     // This logic might be better placed in a central place on user login
     const newUser = await prisma.user.create({
-        data: {
-            id: user.id,
-            firstName: user.given_name ?? "",
-            lastName: user.family_name ?? "",
-            email: user.email ?? "",
-            profileImage: user.picture,
-        }
+      data: {
+        id: user.id,
+        firstName: user.given_name ?? "",
+        lastName: user.family_name ?? "",
+        email: user.email ?? "",
+        profileImage: user.picture,
+      }
     });
     return newUser;
   }
@@ -1105,46 +1126,46 @@ export async function updateUserPersonalDetails(prevState: unknown, formData: Fo
     revalidatePath("/user/personal");
     return { success: "Details updated successfully" };
   } catch {
-        return { error: "Failed to update details" };
+    return { error: "Failed to update details" };
+  }
+}
+
+export async function getSalesData() {
+  noStore();
+  try {
+    const salesData = await prisma.order.findMany({
+      where: {
+        status: 'paid',
+      },
+      select: {
+        createdAt: true,
+        totalAmount: true,
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+
+    const monthlySales = salesData.reduce((acc, { createdAt, totalAmount }) => {
+      const month = new Date(createdAt).toLocaleString('pt-BR', { month: 'long' });
+      const total = totalAmount || 0;
+
+      if (!acc[month]) {
+        acc[month] = 0;
       }
-    }
-    
-    export async function getSalesData() {
-      noStore();
-      try {
-        const salesData = await prisma.order.findMany({
-          where: {
-            status: 'paid',
-          },
-          select: {
-            createdAt: true,
-            totalAmount: true,
-          },
-          orderBy: {
-            createdAt: 'asc',
-          },
-        });
-      
-        const monthlySales = salesData.reduce((acc, { createdAt, totalAmount }) => {
-          const month = new Date(createdAt).toLocaleString('pt-BR', { month: 'long' });
-          const total = totalAmount || 0;
-      
-          if (!acc[month]) {
-            acc[month] = 0;
-          }
-          acc[month] += total / 100; 
-          return acc;
-        }, {} as Record<string, number>);
-      
-        const chartData = Object.entries(monthlySales).map(([month, total]) => ({
-          month,
-          desktop: total,
-        }));
-      
-        return chartData;
-        
-      } catch (error) {
-        console.error("Failed to fetch sales data:", error);
-        return [];
-      }
-    }
+      acc[month] += total / 100;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const chartData = Object.entries(monthlySales).map(([month, total]) => ({
+      month,
+      desktop: total,
+    }));
+
+    return chartData;
+
+  } catch (error) {
+    console.error("Failed to fetch sales data:", error);
+    return [];
+  }
+}

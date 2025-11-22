@@ -44,30 +44,30 @@ const BestSellers = async () => {
           />
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 px-11">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 px-4 md:px-11">
         {products.map((product) => (
           <Link href={`/product/${product.slug}`} key={product.id}>
-            <div className="flex flex-col gap-6 cursor-pointer">
-              <div className="w-full h-[400px] bg-[#EFF1F3] rounded-3xl">
+            <div className="flex flex-col gap-4 md:gap-6 cursor-pointer group">
+              <div className="w-full h-[250px] md:h-[400px] bg-[#EFF1F3] rounded-2xl md:rounded-3xl overflow-hidden">
                 <Image
                   src={product.images[0]}
                   alt={product.name}
                   width={0}
                   height={0}
-                  sizes="100vw"
-                  className="w-full h-full object-cover rounded-3xl"
+                  sizes="(max-width: 768px) 50vw, 25vw"
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
               </div>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2 md:gap-3">
                 <div className="flex flex-col gap-1">
-                  <p className="font-medium text-base leading-5 text-black">
+                  <p className="font-medium text-sm md:text-base leading-5 text-black line-clamp-1">
                     {product.name}
                   </p>
-                  <p className="font-medium text-base leading-5 text-gray-500">
+                  <p className="font-medium text-xs md:text-base leading-5 text-gray-500">
                     {product.category.name}
                   </p>
                 </div>
-                <p className="font-semibold text-base leading-5 text-black">
+                <p className="font-semibold text-sm md:text-base leading-5 text-black">
                   {formatCurrency(product.price)}
                 </p>
               </div>
