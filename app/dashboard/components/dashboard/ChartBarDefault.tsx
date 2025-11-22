@@ -56,7 +56,9 @@ export default function ChartBarDefault({ data }: ChartBarDefaultProps) {
               axisLine={false}
               tickFormatter={(value) => value.slice(0, 3)}
             />
-            <ChartTooltip cursor={false} hideLabel />
+            <ChartTooltip cursor={false}>
+              <ChartTooltipContent />
+            </ChartTooltip>
             <Bar dataKey="desktop" fill="var(--color-desktop)" radius={8} />
           </BarChart>
         </ChartContainer>

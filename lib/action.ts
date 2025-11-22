@@ -2,7 +2,7 @@
 
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { redirect } from "next/navigation";
-import { addressSchema, bannerSchema, productSchema, personalDetailsSchema } from "./zodSchema";
+import { addressSchema, bannerSchema, productSchema, personalDetailsSchema, couponSchema } from "./zodSchema";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
@@ -1168,4 +1168,156 @@ export async function getSalesData() {
     console.error("Failed to fetch sales data:", error);
     return [];
   }
+}
+
+// Favoritos
+export async function toggleFavorite(productId: string) {
+  const { getUser } = getKindeServerSession();
+  const user = await getUser();
+
+  if (!user) {
+    return { error: "Você precisa estar logado para favoritar produtos." };
+  }
+
+  try {
+    const existingFavorite = await prisma.favorite.findUnique({
+      where: {
+        userId_productId: {
+          userId: user.id,
+          productId: productId,
+        },
+      },
+    });
+
+    if (existingFavorite) {
+      await prisma.favorite.delete({
+        where: {
+          id: existingFavorite.id,
+        },
+      });
+      revalidatePath("/");
+      revalidatePath("/user/favorites");
+      return { success: "Produto removido dos favoritos.", isFavorite: false };
+    } else {
+      await prisma.favorite.create({
+        data: {
+          userId: user.id,
+          productId: productId,
+        },
+      });
+      revalidatePath("/");
+      revalidatePath("/user/favorites");
+      return { success: "Produto adicionado aos favoritos.", isFavorite: true };
+    }
+  } catch (error) {
+    console.error("Error toggling favorite:", error);
+    return { error: "Erro ao atualizar favoritos." };
+  }
+}
+
+export async function checkIsFavorite(productId: string) {
+  const { getUser } = getKindeServerSession();
+  const user = await getUser();
+
+  if (!user) return false;
+
+  const favorite = await prisma.favorite.findUnique({
+    where: {
+      userId_productId: {
+        userId: user.id,
+        productId: productId,
+      },
+    },
+  });
+
+  return !!favorite;
+}
+
+export async function getUserFavorites(userId: string) {
+  const favorites = await prisma.favorite.findMany({
+    where: {
+      userId: userId,
+    },
+    include: {
+      product: {
+        include: {
+          category: {
+            include: {
+              parent: true
+            }
+          },
+        }
+      },
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+
+  return favorites.map(fav => fav.product);
+}
+
+// Cupons
+export async function createCoupon(prevState: any, formData: FormData) {
+  const { getUser } = getKindeServerSession();
+  const user = await getUser();
+
+  if (!user || user.email !== "ewerton.businees@gmail.com") {
+    return { error: "Não autorizado" };
+  }
+
+  const validatedFields = couponSchema.safeParse({
+    code: formData.get("code"),
+    discount: Number(formData.get("discount")),
+    type: formData.get("type"),
+    expiresAt: formData.get("expiresAt"),
+  });
+
+  if (!validatedFields.success) {
+    return { error: "Campos inválidos" };
+  }
+
+  const { code, discount, type, expiresAt } = validatedFields.data;
+
+  try {
+    await prisma.coupon.create({
+      data: {
+        code,
+        discount,
+        type: type as "fixed" | "percentage",
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return { error: "Erro ao criar cupom. O código pode já existir." };
+  }
+
+  revalidatePath("/dashboard/coupons");
+  return { success: "Cupom criado com sucesso!" };
+}
+
+export async function deleteCoupon(prevState: any, formData: FormData) {
+  const { getUser } = getKindeServerSession();
+  const user = await getUser();
+
+  if (!user || user.email !== "ewerton.businees@gmail.com") {
+    return { error: "Não autorizado" };
+  }
+
+  const couponId = formData.get("couponId") as string;
+
+  try {
+    await prisma.coupon.delete({
+      where: {
+        id: couponId,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return { error: "Erro ao deletar cupom" };
+  }
+
+  revalidatePath("/dashboard/coupons");
+  return { success: "Cupom deletado com sucesso!" };
 }

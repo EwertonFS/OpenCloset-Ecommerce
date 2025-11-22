@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { type ProductWithCategory } from "@/lib/types";
 import { formatCurrency } from "@/app/helpers";
+import { FavoriteButton } from "@/app/components/FavoriteButton";
 
 interface ProductCardProps {
   products: ProductWithCategory[];
@@ -13,15 +14,16 @@ const ProductCard = ({ products }: ProductCardProps) => {
   }
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-        {products.map((product) => (
-          <Link href={`/product/${product.slug}`} key={product.id}>
+      {products.map((product) => (
+        <div key={product.id} className="group relative">
+          <Link href={`/product/${product.slug}`}>
             <div className="text-center cursor-pointer">
-              <div className="relative w-full h-[400px] bg-[#F1F1F1] rounded-2xl">
+              <div className="relative w-full h-[400px] bg-[#F1F1F1] rounded-2xl overflow-hidden">
                 <Image
                   src={product.images[0]}
                   alt={product.name}
                   fill
-                  className="object-cover rounded-2xl"
+                  className="object-cover rounded-2xl transition-transform duration-300 group-hover:scale-105"
                 />
               </div>
               <h3 className="font-semibold mt-4">{product.name}</h3>
@@ -35,8 +37,12 @@ const ProductCard = ({ products }: ProductCardProps) => {
               </p>
             </div>
           </Link>
-        ))}
-      </div>
+          <div className="absolute top-4 right-4 z-10">
+            <FavoriteButton productId={product.id} />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 };
 

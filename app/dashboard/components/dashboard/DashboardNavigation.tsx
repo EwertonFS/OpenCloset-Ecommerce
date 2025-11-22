@@ -8,6 +8,7 @@ const links = [
   { name: 'Orders', href: '/dashboard/orders' },
   { name: 'Products', href: '/dashboard/products' },
   { name: 'Banner Picture', href: '/dashboard/banner' },
+  { name: 'Coupons', href: '/dashboard/coupons' },
 ];
 
 // foi utilizado o cn para e o hoook para pegar estado da url e deixar o link ativo

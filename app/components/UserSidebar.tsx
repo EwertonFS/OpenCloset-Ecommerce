@@ -20,7 +20,7 @@ export default function UserSidebar({ user }: { user: KindeUser | null }) {
     return (
         <aside className="w-64 p-4 border-r hidden lg:block">
             {user && (
-                <div className="flex items-center gap-2 mb-8">
+                <div className="flex flex-col items-center gap-2 mb-8">
                     <Avatar className="h-16 w-16">
                         <AvatarImage src={user.picture ?? undefined} alt="User avatar" />
                         <AvatarFallback>{user.given_name?.[0]}</AvatarFallback>

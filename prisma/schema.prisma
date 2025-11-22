@@ -25,6 +25,7 @@ model Product {
 
   variants   ProductVariant[]
   dimensions Dimensions?
+  favorites  Favorite[]
 }
 
 model Category {
@@ -195,6 +196,7 @@ model User {
   cpf          String?   @unique
   phone        String?
   addresses    Address[]
+  favorites    Favorite[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
@@ -255,3 +257,16 @@ model OrderItem {
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 }
+
+model Favorite {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  product   Product  @relation(fields: [productId], references: [id])
+  productId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([userId, productId])
+}
+
+

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Package2, Home, ShoppingCart, Package, Users } from "lucide-react";
+import { Package2, Home, ShoppingCart, Package, Users, Ticket } from "lucide-react";
 
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,10 @@ export function AdminSidebar() {
 
   const navLinks = [
     { href: "/dashboard", icon: Home, label: "Dashboard" },
-    { href: "/orders", icon: ShoppingCart, label: "Pedidos" },
-    { href: "/products", icon: Package, label: "Produtos" },
-    { href: "/categories", icon: Users, label: "Categorias" }, // Using Users icon for Categories for now
+    { href: "/dashboard/orders", icon: ShoppingCart, label: "Pedidos" },
+    { href: "/dashboard/products", icon: Package, label: "Produtos" },
+    { href: "/dashboard/categories", icon: Users, label: "Categorias" },
+    { href: "/dashboard/coupons", icon: Ticket, label: "Cupons" },
   ];
 
   return (
@@ -50,9 +51,10 @@ export function AdminMobileSidebar() {
 
   const navLinks = [
     { href: "/dashboard", icon: Home, label: "Dashboard" },
-    { href: "/orders", icon: ShoppingCart, label: "Pedidos" },
-    { href: "/products", icon: Package, label: "Produtos" },
-    { href: "/categories", icon: Users, label: "Categorias" },
+    { href: "/dashboard/orders", icon: ShoppingCart, label: "Pedidos" },
+    { href: "/dashboard/products", icon: Package, label: "Produtos" },
+    { href: "/dashboard/categories", icon: Users, label: "Categorias" },
+    { href: "/dashboard/coupons", icon: Ticket, label: "Cupons" },
   ];
 
   return (

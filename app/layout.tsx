@@ -17,7 +17,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Foxfit Store",
+  title: "OpenCloset Store",
   description: "Seja feroz. Seja FoxFit",
 };
 

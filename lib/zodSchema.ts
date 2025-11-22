@@ -51,3 +51,10 @@ export const personalDetailsSchema = z.object({
   cpf: z.string().optional(),
   phone: z.string().optional(),
 });
+
+export const couponSchema = z.object({
+  code: z.string().min(3, 'O código deve ter pelo menos 3 caracteres').toUpperCase(),
+  discount: z.number().min(1, 'O desconto deve ser maior que 0'),
+  type: z.enum(['fixed', 'percentage']),
+  expiresAt: z.string().optional(),
+});

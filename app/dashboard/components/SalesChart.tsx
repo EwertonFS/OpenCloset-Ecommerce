@@ -69,9 +69,6 @@ export function SalesChart() {
           className="mx-auto aspect-square max-h-[250px]"
         >
           <PieChart>
-            <ChartTooltip
-              cursor={false}
-            />
             <Pie
               data={chartData}
               dataKey="visitors"
