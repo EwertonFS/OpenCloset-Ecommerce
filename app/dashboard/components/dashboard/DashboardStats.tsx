@@ -39,7 +39,7 @@ const DashboardStats = async () => {
     <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle>Total Revenue</CardTitle>
+          <CardTitle>Receita Total</CardTitle>
           <DollarSign className="h-4 w-4 text-green-500" />
         </CardHeader>
         <CardContent>

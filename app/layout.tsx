@@ -2,7 +2,6 @@ import { Toaster } from "@/components/ui/sonner";
 import type { Metadata } from "next";
 import { Anton, Poppins } from "next/font/google";
 import "./globals.css";
-import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 
 const anton = Anton({
   variable: "--font-anton",
@@ -26,7 +25,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { getUser } = getKindeServerSession();
+  // const { getUser } = getKindeServerSession();
   // const user = await getUser();
 
   // if (user) {
@@ -50,9 +49,10 @@ export default async function RootLayout({
   // }
 
   return (
-    <html lang="br">
+    <html lang="br" suppressHydrationWarning>
       <body
         className={`${anton.variable} ${poppins.variable} antialiased`}
+        suppressHydrationWarning
       >
         {children}
         <Toaster />

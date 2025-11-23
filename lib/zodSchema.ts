@@ -57,4 +57,13 @@ export const couponSchema = z.object({
   discount: z.number().min(1, 'O desconto deve ser maior que 0'),
   type: z.enum(['fixed', 'percentage']),
   expiresAt: z.string().optional(),
+  categoryId: z.string().optional(),
+  productId: z.string().optional(),
+  variantId: z.string().optional(),
+});
+
+export const categorySchema = z.object({
+  name: z.string().min(1, 'Nome é obrigatório'),
+  parentId: z.string().optional().nullable(),
+  isArchived: z.boolean().optional(),
 });

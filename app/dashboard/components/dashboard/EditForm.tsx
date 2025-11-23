@@ -114,10 +114,16 @@ export function EditForm({ data, categories }: iAppProps) {
 
   useEffect(() => {
     const currentCategory = categories.find(c => c.id === data.category);
-    if (currentCategory?.parentId) {
-      const parent = categories.find(c => c.id === currentCategory.parentId);
-      if (parent) {
-        setSubCategories(parent.children);
+
+    if (currentCategory) {
+      if (currentCategory.parentId) {
+        const parent = categories.find(c => c.id === currentCategory.parentId);
+        if (parent) {
+          setSubCategories(parent.children);
+        }
+      } else {
+        // Even if it's a parent category, it might have children that should be selectable
+        setSubCategories(currentCategory.children || []);
       }
     }
   }, [categories, data.category]);
@@ -125,6 +131,18 @@ export function EditForm({ data, categories }: iAppProps) {
   useEffect(() => {
     setValue('images', images);
   }, [images, setValue]);
+
+  // Helper to determine the value for the Main Category Select
+  const getCurrentParentId = () => {
+    const currentId = watch('category');
+    const currentCategory = categories.find(c => c.id === currentId) ||
+      categories.flatMap(c => c.children).find(c => c.id === currentId);
+
+    if (currentCategory?.parentId) {
+      return currentCategory.parentId;
+    }
+    return currentCategory?.id || '';
+  };
 
   // Updated onSubmit to handle new data structure
   const onSubmit = (values: ProductForm) => {
@@ -137,10 +155,10 @@ export function EditForm({ data, categories }: iAppProps) {
       formData.append('isFeatured', String(values.isFeatured));
       formData.append('category', values.category);
       formData.append('productId', data.id as string);
-      
+
       // The variants now contain the dimension data
       formData.append('variants', JSON.stringify(values.variants));
-      
+
       images.forEach((image) => {
         formData.append('images', image);
       });
@@ -218,7 +236,7 @@ export function EditForm({ data, categories }: iAppProps) {
                 <p className="text-red-500">{errors.price.message}</p>
               )}
             </div>
-            
+
             {/* Dimension fields are now moved inside variants */}
 
             <div className="flex flex-col gap-3">
@@ -275,7 +293,7 @@ export function EditForm({ data, categories }: iAppProps) {
                       const selected = categories.find((c) => c.id === value);
                       setSubCategories(selected?.children || []);
                     }}
-                    defaultValue={field.value}
+                    value={getCurrentParentId()}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione a Categoria" />
@@ -335,7 +353,7 @@ export function EditForm({ data, categories }: iAppProps) {
                       Remover
                     </Button>
                   </div>
-                  
+
                   {/* Variant-specific fields */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="flex flex-col gap-3">
@@ -519,39 +537,42 @@ export function EditForm({ data, categories }: iAppProps) {
 
             <div className="flex flex-col gap-3">
               <Label>Images</Label>
-              {images.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 mt-4">
-                  {images.map((image, index) => (
-                    <div key={index} className="relative w-[100px] h-[100px]">
-                      <Image
-                        src={image}
-                        alt={`Uploaded image ${index + 1}`}
-                        className="w-full h-full object-cover rounded-md"
-                        height={100}
-                        width={100}
-                      />
-                      <button
-                        onClick={() => handleDeleteImage(index)}
-                        type="button"
-                        className="absolute -top-3 -right-3 bg-red-500 p-2 rounded-lg"
-                      >
-                        <XIcon className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
+              <div className="flex flex-col gap-4">
+                {images.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 mt-4">
+                    {images.map((image, index) => (
+                      <div key={index} className="relative w-[100px] h-[100px]">
+                        <Image
+                          src={image}
+                          alt={`Uploaded image ${index + 1}`}
+                          className="w-full h-full object-cover rounded-md"
+                          height={100}
+                          width={100}
+                        />
+                        <button
+                          onClick={() => handleDeleteImage(index)}
+                          type="button"
+                          className="absolute -top-3 -right-3 bg-red-500 p-2 rounded-lg"
+                        >
+                          <XIcon className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <UploadButton
+                  className='bg-blue-500 rounded-md mx-auto hover:bg-blue-400'
                   endpoint="imageUploader"
                   onClientUploadComplete={(res) => {
-                    setImages(res.map((r) => r.url));
+                    setImages((prev) => [...prev, ...res.map((r) => r.url)]);
                     toast.success('Images uploaded');
                   }}
                   onUploadError={(error: Error) => {
                     alert(`ERROR! ${error.message}`);
                   }}
                 />
-              )}
+              </div>
               {errors.images && (
                 <p className="text-red-500">{errors.images.message}</p>
               )}

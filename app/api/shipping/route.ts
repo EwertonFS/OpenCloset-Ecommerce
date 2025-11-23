@@ -80,7 +80,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(validRates);
 
-  } catch (error) {
+  } catch {
     // console.error('ERRO CRÍTICO ao tentar conectar com o Melhor Envio:', error);
     return NextResponse.json({ error: 'Erro interno ao calcular o frete.' }, { status: 500 });
   }

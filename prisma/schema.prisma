@@ -26,6 +26,7 @@ model Product {
   variants   ProductVariant[]
   dimensions Dimensions?
   favorites  Favorite[]
+  coupons    Coupon[]
 }
 
 model Category {
@@ -38,6 +39,8 @@ model Category {
   parentId String?
   parent   Category?  @relation("SubCategories", fields: [parentId], references: [id], onDelete: Cascade)
   children Category[] @relation("SubCategories")
+  coupons  Coupon[]
+  isArchived Boolean @default(false)
 }
 
 model ProductVariant {
@@ -56,6 +59,7 @@ model ProductVariant {
   color      Color       @relation(fields: [colorId], references: [id])
   colorId    String
   dimensions Dimensions?
+  coupons    Coupon[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -159,6 +163,16 @@ model Coupon {
   type      DiscountType
   expiresAt DateTime?
   orders    Order[]      @relation("CouponToOrder")
+  
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  productId  String?
+  product    Product? @relation(fields: [productId], references: [id])
+
+  variantId  String?
+  variant    ProductVariant? @relation(fields: [variantId], references: [id])
+
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 }
@@ -268,5 +282,3 @@ model Favorite {
   updatedAt DateTime @updatedAt
   @@unique([userId, productId])
 }
-
-

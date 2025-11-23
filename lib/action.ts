@@ -2,13 +2,13 @@
 
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { redirect } from "next/navigation";
-import { addressSchema, bannerSchema, productSchema, personalDetailsSchema, couponSchema } from "./zodSchema";
+import { addressSchema, bannerSchema, productSchema, personalDetailsSchema, couponSchema, categorySchema } from "./zodSchema";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { v4 as uuidv4 } from 'uuid';
 import { unstable_noStore as noStore } from "next/cache";
-import { type Product, type Category, type Prisma } from "@prisma/client";
+import { type Prisma } from "@prisma/client";
 import redis from "./redis";
 import { ProductWithCategory, SortOption } from "./types";
 
@@ -101,7 +101,15 @@ export async function getProductBySlug(slug: string) {
 export async function getCategories() {
   return prisma.category.findMany({
     include: {
-      children: true,
+      children: {
+        include: {
+          products: true,
+        },
+      },
+      products: true,
+    },
+    orderBy: {
+      createdAt: "desc",
     },
   });
 }
@@ -350,12 +358,16 @@ export async function editProduct(formData: FormData) {
           const diff = newQuantity - currentQuantity;
 
           if (diff !== 0) {
-            await tx.inventory.update({
+            await tx.inventory.upsert({
               where: { variantId: existingVariant.id },
-              data: {
+              update: {
                 quantity: {
                   increment: diff,
                 },
+              },
+              create: {
+                variantId: existingVariant.id,
+                quantity: newQuantity,
               },
             });
 
@@ -399,6 +411,9 @@ export async function editProduct(formData: FormData) {
           });
         }
       }
+    }, {
+      maxWait: 60000, // 60 seconds
+      timeout: 60000,  // 60 seconds
     });
 
     revalidatePath("/dashboard/products");
@@ -419,8 +434,8 @@ export async function deleteProduct(formData: FormData) {
 
   const productId = formData.get("id") as string;
 
-  // Delete related inventory first
-  await prisma.inventory.deleteMany({
+  // Check if there are any orders associated with this product
+  const hasOrders = await prisma.orderItem.findFirst({
     where: {
       variant: {
         productId: productId,
@@ -428,19 +443,41 @@ export async function deleteProduct(formData: FormData) {
     },
   });
 
-  // Then delete product variants
-  await prisma.productVariant.deleteMany({
-    where: {
-      productId: productId,
-    },
-  });
+  if (hasOrders) {
+    // If there are orders, we cannot delete. Archive instead.
+    await prisma.product.update({
+      where: {
+        id: productId,
+      },
+      data: {
+        status: "archived",
+      },
+    });
+  } else {
+    // If no orders, proceed with full deletion
+    // Delete related inventory first
+    await prisma.inventory.deleteMany({
+      where: {
+        variant: {
+          productId: productId,
+        },
+      },
+    });
 
-  // Finally, delete the product
-  await prisma.product.delete({
-    where: {
-      id: productId,
-    },
-  });
+    // Then delete product variants
+    await prisma.productVariant.deleteMany({
+      where: {
+        productId: productId,
+      },
+    });
+
+    // Finally, delete the product
+    await prisma.product.delete({
+      where: {
+        id: productId,
+      },
+    });
+  }
 
   revalidatePath("/dashboard/products");
   redirect("/dashboard/products");
@@ -490,10 +527,7 @@ export async function getFilterData() {
   });
   const sizes = productVariants.map(v => v.size).sort();
 
-  const priceAggregate = await prisma.product.aggregate({
-    _min: { price: true },
-    _max: { price: true },
-  });
+
 
   return {
     categories: categories.map(c => ({ ...c, subcategories: c.children })), // Mapeia para a interface esperada
@@ -972,23 +1006,23 @@ export async function getDbUser() {
     return null;
   }
 
-  const dbUser = await prisma.user.findUnique({
+  // Use upsert to avoid race condition when multiple requests try to create the same user
+  const dbUser = await prisma.user.upsert({
     where: { id: user.id },
+    update: {
+      firstName: user.given_name ?? "",
+      lastName: user.family_name ?? "",
+      email: user.email ?? "",
+      profileImage: user.picture,
+    },
+    create: {
+      id: user.id,
+      firstName: user.given_name ?? "",
+      lastName: user.family_name ?? "",
+      email: user.email ?? "",
+      profileImage: user.picture,
+    },
   });
-
-  if (!dbUser) {
-    // This logic might be better placed in a central place on user login
-    const newUser = await prisma.user.create({
-      data: {
-        id: user.id,
-        firstName: user.given_name ?? "",
-        lastName: user.family_name ?? "",
-        email: user.email ?? "",
-        profileImage: user.picture,
-      }
-    });
-    return newUser;
-  }
 
   return dbUser;
 }
@@ -1258,7 +1292,7 @@ export async function getUserFavorites(userId: string) {
 }
 
 // Cupons
-export async function createCoupon(prevState: any, formData: FormData) {
+export async function createCoupon(prevState: unknown, formData: FormData) {
   const { getUser } = getKindeServerSession();
   const user = await getUser();
 
@@ -1271,13 +1305,16 @@ export async function createCoupon(prevState: any, formData: FormData) {
     discount: Number(formData.get("discount")),
     type: formData.get("type"),
     expiresAt: formData.get("expiresAt"),
+    categoryId: formData.get("categoryId") || undefined,
+    productId: formData.get("productId") || undefined,
+    variantId: formData.get("variantId") || undefined,
   });
 
   if (!validatedFields.success) {
     return { error: "Campos inválidos" };
   }
 
-  const { code, discount, type, expiresAt } = validatedFields.data;
+  const { code, discount, type, expiresAt, categoryId, productId, variantId } = validatedFields.data;
 
   try {
     await prisma.coupon.create({
@@ -1286,6 +1323,9 @@ export async function createCoupon(prevState: any, formData: FormData) {
         discount,
         type: type as "fixed" | "percentage",
         expiresAt: expiresAt ? new Date(expiresAt) : null,
+        categoryId,
+        productId,
+        variantId,
       },
     });
   } catch (error) {
@@ -1297,7 +1337,7 @@ export async function createCoupon(prevState: any, formData: FormData) {
   return { success: "Cupom criado com sucesso!" };
 }
 
-export async function deleteCoupon(prevState: any, formData: FormData) {
+export async function deleteCoupon(prevState: unknown, formData: FormData) {
   const { getUser } = getKindeServerSession();
   const user = await getUser();
 
@@ -1320,4 +1360,105 @@ export async function deleteCoupon(prevState: any, formData: FormData) {
 
   revalidatePath("/dashboard/coupons");
   return { success: "Cupom deletado com sucesso!" };
+}
+
+// Categorias
+export async function createCategory(formData: FormData) {
+  const { getUser } = getKindeServerSession();
+  const user = await getUser();
+
+  if (!user || user.email !== "ewerton.businees@gmail.com") {
+    return { error: "Não autorizado" };
+  }
+
+  const validatedFields = categorySchema.safeParse({
+    name: formData.get("name"),
+    parentId: formData.get("parentId") || null,
+    isArchived: formData.get("isArchived") === "true",
+  });
+
+  if (!validatedFields.success) {
+    return { error: "Dados inválidos" };
+  }
+
+  try {
+    await prisma.category.create({
+      data: {
+        name: validatedFields.data.name,
+        parent: validatedFields.data.parentId
+          ? { connect: { id: validatedFields.data.parentId } }
+          : undefined,
+        isArchived: validatedFields.data.isArchived || false,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return { error: "Erro ao criar categoria." };
+  }
+
+  revalidatePath("/dashboard/categories");
+  return { success: "Categoria criada com sucesso!" };
+}
+
+export async function updateCategory(formData: FormData) {
+  const { getUser } = getKindeServerSession();
+  const user = await getUser();
+
+  if (!user || user.email !== "ewerton.businees@gmail.com") {
+    return { error: "Não autorizado" };
+  }
+
+  const categoryId = formData.get("categoryId") as string;
+
+  const validatedFields = categorySchema.safeParse({
+    name: formData.get("name"),
+    parentId: formData.get("parentId") || null,
+    isArchived: formData.get("isArchived") === "true",
+  });
+
+  if (!validatedFields.success) {
+    return { error: "Dados inválidos" };
+  }
+
+  try {
+    await prisma.category.update({
+      where: { id: categoryId },
+      data: {
+        name: validatedFields.data.name,
+        parent: validatedFields.data.parentId
+          ? { connect: { id: validatedFields.data.parentId } }
+          : { disconnect: true },
+        isArchived: validatedFields.data.isArchived || false,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return { error: "Erro ao atualizar categoria." };
+  }
+
+  revalidatePath("/dashboard/categories");
+  return { success: "Categoria atualizada com sucesso!" };
+}
+
+export async function deleteCategory(formData: FormData) {
+  const { getUser } = getKindeServerSession();
+  const user = await getUser();
+
+  if (!user || user.email !== "ewerton.businees@gmail.com") {
+    return { error: "Não autorizado" };
+  }
+
+  const categoryId = formData.get("categoryId") as string;
+
+  try {
+    await prisma.category.delete({
+      where: { id: categoryId },
+    });
+  } catch (error) {
+    console.error(error);
+    return { error: "Erro ao deletar categoria. Verifique se existem produtos associados." };
+  }
+
+  revalidatePath("/dashboard/categories");
+  return { success: "Categoria deletada com sucesso!" };
 }

@@ -15,7 +15,6 @@ import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
-  ChartTooltipContent,
 } from "@/components/ui/chart"
 
 export const description = "A bar chart"
@@ -56,9 +55,7 @@ export default function ChartBarDefault({ data }: ChartBarDefaultProps) {
               axisLine={false}
               tickFormatter={(value) => value.slice(0, 3)}
             />
-            <ChartTooltip cursor={false}>
-              <ChartTooltipContent />
-            </ChartTooltip>
+            <ChartTooltip cursor={false} />
             <Bar dataKey="desktop" fill="var(--color-desktop)" radius={8} />
           </BarChart>
         </ChartContainer>

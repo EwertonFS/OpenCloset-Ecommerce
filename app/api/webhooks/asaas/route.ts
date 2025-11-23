@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { headers } from 'next/headers';
 import { addToCart, checkoutCart, generateLabel, getLabelPrintUrl } from '@/lib/melhor-envio';
 
 
@@ -102,8 +101,7 @@ interface MelhorEnvioPurchase {
 
 
 export async function POST(request: Request) {
-  const headersList = await headers();
-//  const signature = headersList.get('Asaas-Signature');
+  //  const signature = headersList.get('Asaas-Signature');
   // const isVerified = await verifyAsaasSignature(signature);
   // if (!isVerified) {
   //   return NextResponse.json({ message: 'Não autorizado: assinatura inválida' }, { status: 401 });
@@ -128,9 +126,9 @@ export async function POST(request: Request) {
 
       // Encontrar o registro de checkout temporário usando o asaasCustomerId
       const checkout = await prisma.checkout.findFirst({
-  
+
         where: {
-        
+
           paymentProviderData: {
             path: ['customerId'],
             equals: asaasCustomerId,
@@ -147,78 +145,78 @@ export async function POST(request: Request) {
         return NextResponse.json({ message: `Checkout não encontrado.` }, { status: 200 });
       }
 
-            // 6. Criar o pedido real no banco de dados e decrementar o estoque
-            const newOrder = await prisma.$transaction(async (tx) => {
-              const order = await tx.order.create({
-                data: {
-                    totalAmount: checkout.total,
-                    amount: checkout.total,
-                    status: 'paid',
-                    addressId:checkout.address.id,
-                    paymentProviderId: paymentId,
-                    items: {
-                        create: (checkout.cart as CartItem[]).map((item) => ({
-                            quantity: item.quantity,
-                            price: Math.round(item.price * 100),
-                            variant: { connect: { sku: item.sku } },
-                        })),
-                    },
-                },
-                include: {
-                  items: true,
-                }
-            }) as Order;
+      // 6. Criar o pedido real no banco de dados e decrementar o estoque
+      const newOrder = await prisma.$transaction(async (tx) => {
+        const order = await tx.order.create({
+          data: {
+            totalAmount: checkout.total,
+            amount: checkout.total,
+            status: 'paid',
+            addressId: checkout.address.id,
+            paymentProviderId: paymentId,
+            items: {
+              create: (checkout.cart as CartItem[]).map((item) => ({
+                quantity: item.quantity,
+                price: Math.round(item.price * 100),
+                variant: { connect: { sku: item.sku } },
+              })),
+            },
+          },
+          include: {
+            items: true,
+          }
+        }) as Order;
 
-              for (const item of order.items) {
-          
-                  const inventoryUpdate = await tx.inventory.updateMany({
-                      where: {
-                          variantId: item.variantId,
-                          quantity: {
-                              gte: item.quantity,
-                          },
-                      },
-                      data: {
-                          quantity: {
-                              decrement: item.quantity,
-                          },
-                      },
-                  });
-          
-                  if (inventoryUpdate.count === 0) {
-                      throw new Error(`Insufficient stock for SKU: ${item.variantId}.`);
-                  }
+        for (const item of order.items) {
 
-                  await tx.stockMovement.create({
-                    data: {
-                      type: 'OUT',
-                      quantity: item.quantity,
-                      notes: `Venda - Pedido #${order.id}`,
-                      variantId: item.variantId,
-                    }
-                  });
-              }
-          
-              await tx.checkout.delete({
-                  where: { id: checkout.id },
-              });
-          
-              return order;
+          const inventoryUpdate = await tx.inventory.updateMany({
+            where: {
+              variantId: item.variantId,
+              quantity: {
+                gte: item.quantity,
+              },
+            },
+            data: {
+              quantity: {
+                decrement: item.quantity,
+              },
+            },
           });
-          
+
+          if (inventoryUpdate.count === 0) {
+            throw new Error(`Insufficient stock for SKU: ${item.variantId}.`);
+          }
+
+          await tx.stockMovement.create({
+            data: {
+              type: 'OUT',
+              quantity: item.quantity,
+              notes: `Venda - Pedido #${order.id}`,
+              variantId: item.variantId,
+            }
+          });
+        }
+
+        await tx.checkout.delete({
+          where: { id: checkout.id },
+        });
+
+        return order;
+      });
+
       console.log(`Novo pedido ${newOrder.id} criado com o status PAGO.`);
 
       // --- INÍCIO DA INTEGRAÇÃO MELHOR ENVIO ---
       try {
         console.log(`Iniciando geração de etiqueta para o pedido ${newOrder.id}`);
-        
+
         // 1. Adicionar ao carrinho
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const cartItem = await addToCart(newOrder as any) as { id: string };
         console.log(`Pedido ${newOrder.id} adicionado ao carrinho do Melhor Envio com ID: ${cartItem.id}`);
 
         // 2. Comprar a etiqueta
-        const purchase =(await checkoutCart([cartItem.id]))as MelhorEnvioPurchase;
+        const purchase = (await checkoutCart([cartItem.id])) as MelhorEnvioPurchase;
         console.log(`Compra da etiqueta para o pedido ${newOrder.id} realizada com sucesso.`);
         console.log("Conteúdo do objeto 'purchase':", JSON.stringify(purchase, null, 2)); // DEBUG
 
@@ -242,13 +240,13 @@ export async function POST(request: Request) {
         if (labelUrl || trackingCode) {
           // Encontrar ou criar o provedor de frete 'Melhor Envio'
           let melhorEnvioProvider = await prisma.shippingProvider.findUnique({
-              where: { name: "Melhor Envio" },
+            where: { name: "Melhor Envio" },
           });
 
           if (!melhorEnvioProvider) {
-              melhorEnvioProvider = await prisma.shippingProvider.create({
-                  data: { name: "Melhor Envio" },
-              });
+            melhorEnvioProvider = await prisma.shippingProvider.create({
+              data: { name: "Melhor Envio" },
+            });
           }
 
           // 5. Salvar URL da etiqueta e código de rastreio no Shipment
@@ -266,8 +264,8 @@ export async function POST(request: Request) {
           console.error(`Não foi possível obter a URL de impressão ou o código de rastreio para o pedido ${newOrder.id}`);
         }
 
-      } catch (shippingError:unknown) {
-         if (shippingError instanceof Error) {
+      } catch (shippingError: unknown) {
+        if (shippingError instanceof Error) {
           console.error(`ERRO AO GERAR ETIQUETA DE ENVIO para o pedido ${newOrder.id}:`, shippingError.message);
         } else {
           console.error(`ERRO AO GERAR ETIQUETA DE ENVIO para o pedido ${newOrder.id}:`, shippingError);

@@ -59,7 +59,7 @@ export function ShoppingCart({ cartItems }: { cartItems: CartItem[] }) {
                   </div>
                   <div className="flex items-center justify-between">
                     <p className="font-semibold">
-                      R${(item.price / 100).toFixed(2).replace(".", ",")}
+                      R${item.price.toFixed(2).replace(".", ",")}
                     </p>
                     <div className="flex items-center gap-x-2 border rounded-md px-2 py-1">
                       <button
@@ -93,7 +93,7 @@ export function ShoppingCart({ cartItems }: { cartItems: CartItem[] }) {
         <div className="flex justify-between items-center">
           <p className="text-gray-500">Subtotal</p>
           <p className="font-semibold">
-            R${(subtotal / 100).toFixed(2).replace(".", ",")}
+            R${subtotal.toFixed(2).replace(".", ",")}
           </p>
         </div>
         <Link href="/order-review" passHref>

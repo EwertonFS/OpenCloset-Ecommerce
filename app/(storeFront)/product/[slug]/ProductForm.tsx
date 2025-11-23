@@ -119,15 +119,15 @@ export function ProductForm({ product, setSelectedImage }: ProductFormProps) {
   const formAction = async (formData: FormData) => {
     formData.append("sku", selectedVariant?.sku || "");
     formData.append("quantity", quantity.toString());
-    
+
     const result = await AddCartItem(formData);
     if (result?.error) {
-     toast.error(result.error);
+      toast.error(result.error);
     } else {
-    toast.success("Produto adicionado à sacola!");
+      toast.success("Produto adicionado à sacola!");
     }
   };
-  
+
 
   return (
     <div>
@@ -184,14 +184,14 @@ export function ProductForm({ product, setSelectedImage }: ProductFormProps) {
         <div className="mt-8 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
           <button
             type="submit"
-            className="bg-blue-600 text-white font-semibold py-3 px-6 rounded-full w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-blue-600 text-white font-semibold py-4 px-6 rounded-full w-full disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={!selectedVariant || (selectedVariant.inventory?.quantity ?? 0) === 0}
           >
             {selectedVariant && (selectedVariant.inventory?.quantity ?? 0) > 0 ? "Adicionar à sacola" : "Esgotado"}
           </button>
           <button
-            type="button" // Mude para "button" para não submeter o formulário
-            className="bg-transparent border border-black text-black font-semibold py-3 px-6 rounded-full w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            type="button"
+            className="bg-transparent border border-black text-black font-semibold py-4 px-6 rounded-full w-full disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={!selectedVariant || (selectedVariant.inventory?.quantity ?? 0) === 0}
           >
             Comprar agora

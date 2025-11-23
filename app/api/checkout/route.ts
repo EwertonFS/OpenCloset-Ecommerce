@@ -98,23 +98,38 @@ export async function POST(request: Request) {
     });
 
     const customerResponseText = await customerResponse.text();
-    if (!customerResponse.ok) {
-      console.error("Erro ao criar cliente no Asaas:", customerResponseText);
-      return NextResponse.json({ error: "Erro ao criar cliente", details: customerResponseText }, { status: customerResponse.status });
-    }
-    const customerData = JSON.parse(customerResponseText);
+    let customerData;
 
-    // Atualiza o checkout com o ID do cliente Asaas
+    if (customerResponse.ok) {
+      customerData = JSON.parse(customerResponseText);
+    } else {
+      // Se falhar ao criar, tenta buscar pelo email (caso já exista)
+      if (customerResponseText.includes("email")) {
+        const searchResponse = await fetch(`https://api-sandbox.asaas.com/v3/customers?email=${user.email}`, {
+          headers: {
+            access_token: process.env.ASAAS_SANDBOX_KEY!,
+          },
+        });
+        const searchData = await searchResponse.json();
+        if (searchData.data && searchData.data.length > 0) {
+          customerData = searchData.data[0];
+        }
+      }
+    }
+
+    if (!customerData) {
+      console.error("Erro ao criar/buscar cliente no Asaas:", customerResponseText);
+      return NextResponse.json({ error: "Erro ao processar cliente", details: customerResponseText }, { status: 400 });
+    }
+
+    // Atualiza o checkout com o ID do cliente Asaas (opcional, mas bom para rastreio)
     try {
       console.log(`Tentando atualizar checkout ${newCheckout.id} com Asaas customerId: ${customerData.id}`);
       await prisma.checkout.update({
         where: { id: newCheckout.id },
         data: {
-          paymentProviderData: {
-            gateway: 'asaas',
-            customerId: customerData.id,
-          },
-        },
+          paymentProviderData: { asaasCustomerId: customerData.id } as unknown as Prisma.JsonObject
+        }
       });
       console.log(`Checkout ${newCheckout.id} atualizado com sucesso.`);
     } catch (error) {
@@ -141,7 +156,7 @@ export async function POST(request: Request) {
         const asaasItem: AsaasItem = {
           name: item.name.substring(0, 30),
           quantity: item.quantity,
-          value: item.price,
+          value: parseFloat(item.price.toFixed(2)),
         };
 
         // Adiciona a imagem apenas se ela foi convertida com sucesso
@@ -157,14 +172,44 @@ export async function POST(request: Request) {
     );
 
     if (shipping && shipping.price) {
-      asaasItems.push({
-        name: "Custo de Envio",
-        quantity: 1,
-        value: parseFloat(shipping.price),
-      });
+      const shippingPrice = parseFloat(shipping.price);
+      if (shippingPrice > 0) {
+        asaasItems.push({
+          name: "Custo de Envio",
+          quantity: 1,
+          value: shippingPrice,
+        });
+      }
+    }
+
+    // Validação: garantir que todos os itens tenham value válido
+    const invalidItems = asaasItems.filter(item => !item.value || item.value <= 0);
+    if (invalidItems.length > 0) {
+      console.error("Itens com value inválido:", invalidItems);
+      return NextResponse.json({
+        error: "Erro ao processar itens do carrinho",
+        details: "Alguns itens não possuem valor válido"
+      }, { status: 400 });
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
+    const payload = {
+      billingTypes: ["CREDIT_CARD"],
+      chargeTypes: ["DETACHED"],
+      items: asaasItems,
+      value: parseFloat(total.toFixed(2)), // Garante formato decimal
+      description: `Pedido FoxFit - ${cart.length} item(s)`,
+      externalReference: newCheckout.id,
+      callback: {
+        successUrl: `${baseUrl}/order-review/payment/sucess`,
+        cancelUrl: `${baseUrl}/order-review/payment/cancel`,
+        expiredUrl: `${baseUrl}/order-review/payment/expired`,
+      },
+      customer: customerData.id,
+    };
+
+    console.log("Payload enviado para o Asaas:", JSON.stringify(payload, null, 2));
 
     // 5. Cria checkout hospedado no Asaas
     const checkoutResponse = await fetch("https://api-sandbox.asaas.com/v3/checkouts", {
@@ -173,19 +218,7 @@ export async function POST(request: Request) {
         "Content-Type": "application/json",
         access_token: process.env.ASAAS_SANDBOX_KEY!,
       },
-      body: JSON.stringify({
-        billingTypes: ["CREDIT_CARD"],
-        chargeTypes: ["DETACHED"],
-        items: asaasItems,
-        description: `Pedido FoxFit - ${cart.length} item(s)`,
-        externalReference: newCheckout.id,
-        callback: {
-          successUrl: `${baseUrl}/order-review/payment/sucess`,
-          cancelUrl: `${baseUrl}/order-review/payment/cancel`,
-          expiredUrl: `${baseUrl}/order-review/payment/expired`,
-        },
-        customer: customerData.id,
-      }),
+      body: JSON.stringify(payload),
     });
 
     const checkoutResponseText = await checkoutResponse.text();

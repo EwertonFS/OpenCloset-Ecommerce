@@ -51,7 +51,7 @@ export function FavoriteButton({ productId, className }: FavoriteButtonProps) {
                     toast.success("Removido dos favoritos");
                 }
             }
-        } catch (error) {
+        } catch {
             setIsFavorite(previousState);
             toast.error("Erro ao atualizar favoritos");
         }

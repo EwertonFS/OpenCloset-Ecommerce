@@ -8,7 +8,7 @@ import {
   LogoutLink,
 } from "@kinde-oss/kinde-auth-nextjs/components";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
-import React, { type ReactNode } from "react";
+import React from "react";
 import { NavbarLinks, navbarlinks } from "./navbar";
 import {
   DropdownMenu,

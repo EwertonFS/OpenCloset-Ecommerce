@@ -108,7 +108,8 @@ const ChartTooltip = React.forwardRef<
       hideLabel = false,
       ...props
     },
-    ref
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _ref
   ) => {
     const { config } = useChart()
 
@@ -119,15 +120,15 @@ const ChartTooltip = React.forwardRef<
           hideIndicator
             ? false
             : {
-                stroke: "hsl(var(--border))",
-                strokeWidth: 1,
-                ...(indicator === "line" && {
-                  strokeWidth: 2,
-                }),
-                ...(indicator === "dashed" && {
-                  strokeDasharray: "4 4",
-                }),
-              }
+              stroke: "hsl(var(--border))",
+              strokeWidth: 1,
+              ...(indicator === "line" && {
+                strokeWidth: 2,
+              }),
+              ...(indicator === "dashed" && {
+                strokeDasharray: "4 4",
+              }),
+            }
         }
         content={
           <ChartTooltipContent
@@ -241,15 +242,18 @@ const ChartTooltipContent = React.forwardRef<
     {
       className,
       config,
-      indicator = "dot",
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      indicator: _indicator = "dot",
       hideLabel = false,
-      hideIndicator = false,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      hideIndicator: _hideIndicator = false,
       payload,
       ...props
     },
     ref
   ) => {
-    const { activeChart } = useChart()
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { activeChart: _activeChart } = useChart()
     const item = payload?.[0]
 
     if (!item) {
