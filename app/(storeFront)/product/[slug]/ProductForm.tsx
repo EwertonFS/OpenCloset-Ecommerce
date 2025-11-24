@@ -9,6 +9,7 @@ import Image from "next/image";
 import { Dialog, DialogContent, DialogPortal, DialogTitle } from "@/components/ui/dialog";
 import { formatCurrency } from "@/app/helpers";
 import { SubmitButton } from "@/app/components/SubmitButton";
+import { Badge } from "@/components/ui/badge";
 
 type ProductWithVariants = Prisma.ProductGetPayload<{
   include: {
@@ -56,7 +57,7 @@ function ColorSelector({ variants, selectedColor, onColorSelect, onImageClick }:
               alt={color.name}
               width={64}
               height={64}
-              className="w-full h-full object-cover rounded-md"
+              className="w-full h-full object-cover rounded-md cursor-pointer" title="Clique duas vezes para selecionar para ampliar"
             />
           </button>
         ))}
@@ -154,36 +155,44 @@ export function ProductForm({ product, setSelectedImage }: ProductFormProps) {
           </p>
         )}
 
-        <p className="text-3xl font-bold mt-4">
-          {formatCurrency(selectedVariant ? selectedVariant.price : product.price)}
-        </p>
+        <div className="flex flex-row justify-between items-center mt-4">
 
-        <div className="mt-8">
-          <p className="font-semibold">Quantidade</p>
-          <div className="flex items-center border border-gray-200 rounded-lg w-fit mt-2">
-            <button
-              type="button"
-              onClick={() => handleQuantityChange(-1)}
-              className="px-4 py-2"
-              disabled={quantity <= 1}
-            >
-              -
-            </button>
-            <span className="px-4 py-2">{quantity}</span>
-            <button
-              type="button"
-              onClick={() => handleQuantityChange(1)}
-              className="px-4 py-2"
-              disabled={!selectedVariant || quantity >= (selectedVariant.inventory?.quantity ?? 0)}
-            >
-              +
-            </button>
+
+          <div className="">
+            <p className="font-semibold">Quantidade</p>
+            <div className="flex items-center border border-gray-200 rounded-lg w-fit mt-2">
+              <button
+                type="button"
+                onClick={() => handleQuantityChange(-1)}
+                className="px-4 py-2"
+                disabled={quantity <= 1}
+              >
+                -
+              </button>
+              <span className="px-4 py-2">{quantity}</span>
+              <button
+                type="button"
+                onClick={() => handleQuantityChange(1)}
+                className="px-4 py-2"
+                disabled={!selectedVariant || quantity >= (selectedVariant.inventory?.quantity ?? 0)}
+              >
+                +
+              </button>
+            </div>
           </div>
+
+          <p className="text-3xl font-bold mt-4">
+            {formatCurrency(selectedVariant ? selectedVariant.price : product.price)}
+          </p>
+
         </div>
+
+
+
 
         <div className="mt-8 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
           <SubmitButton
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-6 px-6 rounded-full w-full disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+            className="bg-blue-600 cursor-pointer hover:bg-blue-700 text-white font-semibold py-6 px-6 rounded-full w-full disabled:opacity-50 disabled:cursor-not-allowed text-lg"
             disabled={!selectedVariant || (selectedVariant.inventory?.quantity ?? 0) === 0}
             loadingText="Adicionando..."
           >
@@ -191,7 +200,7 @@ export function ProductForm({ product, setSelectedImage }: ProductFormProps) {
           </SubmitButton>
         </div>
 
-        <p className="mt-8 text-gray-700">{product.description}</p>
+        <p className="mt-8 text-gray-700 text-sm">{product.description}</p>
       </form>
 
       <Dialog open={isPopupOpen} onOpenChange={setIsPopupOpen}>
@@ -209,5 +218,7 @@ export function ProductForm({ product, setSelectedImage }: ProductFormProps) {
         </DialogPortal>
       </Dialog>
     </div>
+
+
   );
 }

@@ -9,7 +9,7 @@ interface SizeSelectorProps {
   variants: (ProductVariant & { inventory: Inventory | null })[];
 }
 
-const allSizes = ["PP", "P", "M", "G", "GG",'Único'];
+const allSizes = ["PP", "P", "M", "G", "GG", 'Único'];
 
 export function SizeSelector({ selectedSize, onSizeSelect, variants }: SizeSelectorProps) {
   const availableSizes = useMemo(() => {
@@ -40,11 +40,10 @@ export function SizeSelector({ selectedSize, onSizeSelect, variants }: SizeSelec
               key={size}
               onClick={() => onSizeSelect(size)}
               disabled={quantity === 0}
-              className={`flex items-center justify-center gap-2 rounded-xl border p-5 ${
-                selectedSize === size
-                  ? "border-black"
-                  : "border-gray-200"
-              } ${quantity === 0 ? 'border-dashed' : ''}`}
+              className={`flex items-center justify-center gap-2 rounded-md border p-2 ${selectedSize === size
+                ? "border-black bg-blue-300"
+                : "border-gray-200"
+                } ${quantity === 0 ? 'border-dashed' : ''}`}
             >
               <span className={`text-base font-medium ${quantity === 0 ? 'text-gray-400' : ''}`}>{size}</span>
             </button>

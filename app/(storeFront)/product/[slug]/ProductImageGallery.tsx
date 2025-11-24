@@ -21,7 +21,7 @@ interface ProductImageGalleryProps {
 export function ProductImageGallery({ images, productName, selectedImage, setSelectedImage }: ProductImageGalleryProps) {
   const [mobileApi, setMobileApi] = useState<CarouselApi>();
   const [mobileCurrent, setMobileCurrent] = useState(0);
-  
+
   const [desktopApi, setDesktopApi] = useState<CarouselApi>();
   const [desktopCurrent, setDesktopCurrent] = useState(0);
 
@@ -67,9 +67,8 @@ export function ProductImageGallery({ images, productName, selectedImage, setSel
           {images.map((image, index) => (
             <div
               key={`desktop-thumb-${index}`}
-              className={`relative w-[60px] h-[60px] rounded-xl cursor-pointer overflow-hidden border-2 ${
-                desktopCurrent === index ? 'border-amber-300' : 'border-transparent'
-              }`}
+              className={`relative w-[60px] h-[60px] rounded-xl cursor-pointer overflow-hidden border-2 ${desktopCurrent === index ? 'border-amber-300' : 'border-transparent'
+                }`}
               onClick={() => handleThumbnailClick(index)}
             >
               <Image
@@ -129,9 +128,8 @@ export function ProductImageGallery({ images, productName, selectedImage, setSel
           {images.map((image, index) => (
             <div
               key={`mobile-thumb-${index}`}
-              className={`relative w-16 h-16 rounded-lg cursor-pointer overflow-hidden border-2 ${
-                mobileCurrent === index ? 'border-amber-300' : 'border-transparent'
-              }`}
+              className={`relative w-16 h-16 rounded-lg cursor-pointer overflow-hidden border-2 ${mobileCurrent === index ? 'border-amber-300' : 'border-transparent'
+                }`}
               onClick={() => handleThumbnailClick(index)}
             >
               <Image

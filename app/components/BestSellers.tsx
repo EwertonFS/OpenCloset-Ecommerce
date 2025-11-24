@@ -40,7 +40,7 @@ const BestSellers = async () => {
       <div className="flex items-center justify-between px-11">
         <h2 className="font-semibold text-2xl leading-9">Produtos em Destaque</h2>
         <div className="flex items-center gap-2.5">
-          <Link href="/products">
+          <Link href="/product">
             <p className="font-semibold text-base leading-6 hover:underline">Ver todos</p>
           </Link>
           <Image

@@ -36,23 +36,24 @@ const Hero = async () => {
       <CarouselContent>
         {data.map((item) => (
           <CarouselItem key={item.id}>
-            <div className="relative h-[60vh] lg:h-[80vh]">
+            <div className="relative h-[40vh] sm:h-[50vh] md:h-[60vh] lg:h-[80vh] w-full">
               <Image
-                alt="Banner Image"
+                alt={item.title}
                 src={item.imageString}
                 fill
-                className="h-full w-full object-contain md:object-cover rounded-xl"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 100vw"
+                className="object-cover object-center rounded-none md:rounded-xl"
                 priority
               />
-              <div className="absolute top-4 left-4 md:top-6 md:left-6 transform rounded-xl bg-black/75 p-4 md:p-6 text-white shadow-lg transition-transform hover:scale-105">
-                <h1 className="text-xl font-bold lg:text-4xl">{item.title}</h1>
+              <div className="absolute bottom-6 left-4 md:top-10 md:left-10 md:bottom-auto max-w-[80%] md:max-w-lg rounded-xl bg-black/60 backdrop-blur-sm p-4 md:p-6 text-white shadow-lg transition-all hover:bg-black/70">
+                <h1 className="text-lg font-bold sm:text-2xl lg:text-4xl leading-tight">{item.title}</h1>
               </div>
             </div>
           </CarouselItem>
         ))}
       </CarouselContent>
-      <CarouselPrevious className="ml-16" />
-      <CarouselNext className="mr-16" />
+      <CarouselPrevious className="left-2 md:left-12" />
+      <CarouselNext className="right-2 md:right-12" />
     </Carousel>
   );
 }
