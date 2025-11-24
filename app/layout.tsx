@@ -16,8 +16,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "OpenCloset Store",
-  description: "Seja feroz. Seja FoxFit",
+  title: "Elayah",
+  description: "Estilo Eterno",
 };
 
 export default async function RootLayout({

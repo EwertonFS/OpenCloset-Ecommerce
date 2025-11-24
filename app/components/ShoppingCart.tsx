@@ -4,7 +4,9 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useTransition } from "react";
+import { useTransition, useState } from "react";
+import { useRouter } from "next/navigation";
+import { SubmitButton } from "@/app/components/SubmitButton";
 import { toast } from "sonner";
 import { removeCartItem, updateCartItem } from "@/lib/action";
 
@@ -21,19 +23,27 @@ type CartItem = {
 export function ShoppingCart({ cartItems }: { cartItems: CartItem[] }) {
   const [isPending, startTransition] = useTransition();
 
+  const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
+  const router = useRouter();
+
+  const handleCheckout = () => {
+    setIsLoadingCheckout(true);
+    router.push("/order-review");
+  };
+
   const subtotal = cartItems.reduce((acc, item) => acc + item.lineTotal, 0);
 
-  function handleUpdateQuantity(sku: string, newQuantity: number) {
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.append("sku", sku);
-      formData.append("quantity", String(newQuantity));
-      const result = await updateCartItem(formData);
-      if (result?.error) {
-        toast.error(result.error);
-      }
-    });
-  }
+  // function handleUpdateQuantity(sku: string, newQuantity: number) {
+  //   startTransition(async () => {
+  //     const formData = new FormData();
+  //     formData.append("sku", sku);
+  //     formData.append("quantity", String(newQuantity));
+  //     const result = await updateCartItem(formData);
+  //     if (result?.error) {
+  //       toast.error(result.error);
+  //     }
+  //   });
+  // }
 
   return (
     <>
@@ -61,7 +71,7 @@ export function ShoppingCart({ cartItems }: { cartItems: CartItem[] }) {
                     <p className="font-semibold">
                       R${item.price.toFixed(2).replace(".", ",")}
                     </p>
-                    <div className="flex items-center gap-x-2 border rounded-md px-2 py-1">
+                    {/* <div className="flex items-center gap-x-2 border rounded-md px-2 py-1">
                       <button
                         onClick={() => handleUpdateQuantity(item.sku, item.quantity - 1)}
                         disabled={isPending}
@@ -75,14 +85,14 @@ export function ShoppingCart({ cartItems }: { cartItems: CartItem[] }) {
                       >
                         <Plus size={14} />
                       </button>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
                 <form action={removeCartItem}>
                   <input type="hidden" name="sku" value={item.sku} />
-                  <Button variant="ghost" size="icon" className="self-start" disabled={isPending}>
+                  <SubmitButton variant="ghost" size="icon" className="self-start" loadingText="">
                     <Trash2 size={16} />
-                  </Button>
+                  </SubmitButton>
                 </form>
               </div>
             ))
@@ -96,14 +106,21 @@ export function ShoppingCart({ cartItems }: { cartItems: CartItem[] }) {
             R${subtotal.toFixed(2).replace(".", ",")}
           </p>
         </div>
-        <Link href="/order-review" passHref>
-          <Button className="w-full mt-4 bg-[#5131E8] hover:bg-[#5131E8]/90">
-            Finalizar a compra
+        <SubmitButton
+          onClick={handleCheckout}
+          isLoading={isLoadingCheckout}
+          loadingText="Iniciando..."
+          className="w-full mt-4 bg-[#5131E8] text-white hover:bg-[#5131E8]/90"
+          type="button"
+        >
+          Finalizar a compra
+        </SubmitButton>
+
+        <Link href="/product" passHref>
+          <Button variant="link" className="w-full mt-2 text-center text-black">
+            Continuar comprando
           </Button>
         </Link>
-        <Button variant="link" className="w-full mt-2 text-center text-black">
-          Continuar comprando
-        </Button>
       </div>
     </>
   );

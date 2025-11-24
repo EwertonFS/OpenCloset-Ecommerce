@@ -58,7 +58,7 @@ export function Header({ children, cartCount }: { children: React.ReactElement<C
 
           <Link href="/">
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl md:text-4xl font-bold">OpenCloset</h1>
+              <h1 className="text-2xl md:text-4xl font-bold">Elayah</h1>
               <Image
                 src="/icons/registered.svg"
                 alt="Registered"
@@ -100,6 +100,11 @@ export function Header({ children, cartCount }: { children: React.ReactElement<C
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {(user?.email === 'ewerton.businees@gmail.com' || user?.email === 'erickalais13@gmail.com') && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard">Admin</Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem asChild>
                   <Link href="/user">Minha Conta</Link>
                 </DropdownMenuItem>

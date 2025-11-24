@@ -142,7 +142,7 @@ export async function POST(request: Request) {
         let imageBase64: string | null = null;
         if (item.image) {
           try {
-            const imageUrl = new URL(item.image, process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000').toString();
+            const imageUrl = new URL(item.image, process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000' || 'https://open-closet.vercel.app').toString();
             const response = await fetch(imageUrl);
             if (response.ok) {
               const buffer = await response.arrayBuffer();
@@ -192,7 +192,7 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000' || 'https://open-closet.vercel.app';
 
     const payload = {
       billingTypes: ["CREDIT_CARD"],

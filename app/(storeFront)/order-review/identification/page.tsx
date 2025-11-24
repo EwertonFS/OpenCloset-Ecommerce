@@ -265,7 +265,7 @@ export default function IdentificationPage() {
                                                 <p>
                                                     A taxa de entrega será cobrada de acordo com o valor da empresa de envio.
                                                     Entraremos em contato via WhatsApp para definir o horário de entrega.
-                                                    <strong> Este valor não será cobrado agora.</strong>
+                                                    <strong> Este valor não será cobrado agora mas deverá ser pago no ato da entrega pelo cliente.</strong>
                                                 </p>
                                             </div>
                                         ) : (

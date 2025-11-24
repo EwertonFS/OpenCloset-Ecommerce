@@ -20,7 +20,9 @@ export function MobileNav() {
       <SheetContent side="left">
         <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
         <nav className="flex flex-col text-lg gap-6 font-medium mt-5 ml-4">
+
           <DashboardNavigation />
+
         </nav>
       </SheetContent>
     </Sheet>

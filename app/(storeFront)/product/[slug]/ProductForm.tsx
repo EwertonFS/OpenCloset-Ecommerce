@@ -1,4 +1,3 @@
-// app/(storeFront)/product/[slug]/ProductForm.tsx
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
@@ -9,6 +8,7 @@ import { toast, Toaster } from "sonner";
 import Image from "next/image";
 import { Dialog, DialogContent, DialogPortal, DialogTitle } from "@/components/ui/dialog";
 import { formatCurrency } from "@/app/helpers";
+import { SubmitButton } from "@/app/components/SubmitButton";
 
 type ProductWithVariants = Prisma.ProductGetPayload<{
   include: {
@@ -182,20 +182,13 @@ export function ProductForm({ product, setSelectedImage }: ProductFormProps) {
         </div>
 
         <div className="mt-8 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-          <button
-            type="submit"
-            className="bg-blue-600 text-white font-semibold py-4 px-6 rounded-full w-full disabled:opacity-50 disabled:cursor-not-allowed"
+          <SubmitButton
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-6 px-6 rounded-full w-full disabled:opacity-50 disabled:cursor-not-allowed text-lg"
             disabled={!selectedVariant || (selectedVariant.inventory?.quantity ?? 0) === 0}
+            loadingText="Adicionando..."
           >
             {selectedVariant && (selectedVariant.inventory?.quantity ?? 0) > 0 ? "Adicionar à sacola" : "Esgotado"}
-          </button>
-          <button
-            type="button"
-            className="bg-transparent border border-black text-black font-semibold py-4 px-6 rounded-full w-full disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={!selectedVariant || (selectedVariant.inventory?.quantity ?? 0) === 0}
-          >
-            Comprar agora
-          </button>
+          </SubmitButton>
         </div>
 
         <p className="mt-8 text-gray-700">{product.description}</p>

@@ -5,6 +5,8 @@ import { NewArrivals } from "@/app/components/NewArrivals";
 import { Plus, Trash2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { getCart } from "@/lib/action";
+import { formatCurrency } from "@/app/helpers";
+import { ContinueButton } from "@/app/components/ContinueButton";
 
 export default async function OrderReviewPage() {
   const cartItems = await getCart();
@@ -35,13 +37,13 @@ export default async function OrderReviewPage() {
                   />
                 </div>
                 <div className="flex flex-col flex-grow">
-                  <h3 className="font-semibold text-lg">{item.name}</h3>                  
+                  <h3 className="font-semibold text-lg">{item.name}</h3>
                   <p className="text-sm text-gray-500">
                     Tamanho: {item.size}
                   </p>
                   <div className="flex items-center justify-between mt-auto">
                     <p className="font-semibold text-lg">
-                      R$ {(item.price / 100).toFixed(2).replace(".", ",")}
+                      {formatCurrency(item.price)}
                     </p>
                     <div className="flex items-center gap-x-3 border rounded-md px-3 py-1.5">
                       <button>
@@ -52,16 +54,16 @@ export default async function OrderReviewPage() {
                         <Plus size={16} />
                       </button>
                     </div>
-                   
+
                   </div>
                   <div className="flex-col items-start gap-1.5 justify-stretch">
-                     <Separator/>
+                    <Separator />
                   </div>
-                   
+
                 </div>
-                
+
               </div>
-             
+
             ))}
           </div>
         </div>
@@ -73,11 +75,11 @@ export default async function OrderReviewPage() {
             <div className="space-y-4">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span className="font-medium">R$ {(subtotal / 100).toFixed(2).replace(".", ",")}</span>
+                <span className="font-medium">{formatCurrency(subtotal)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Transporte e Manuseio</span>
-                <span className="font-medium">{shipping === 0 ? "Grátis" : `R$ ${(shipping / 100).toFixed(2).replace(".", ",")}`}</span>
+                <span className="font-medium">{shipping === 0 ? "—" : formatCurrency(shipping)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Taxa Estimada</span>
@@ -86,14 +88,10 @@ export default async function OrderReviewPage() {
               <div className="border-t my-4"></div>
               <div className="flex justify-between font-bold text-lg">
                 <span>Total</span>
-                <span>R$ {(total / 100).toFixed(2).replace(".", ",")}</span>
+                <span>{formatCurrency(total)}</span>
               </div>
             </div>
-            <Link href="/order-review/identification" passHref>
-              <Button className="w-full mt-6 bg-[#5131E8] hover:bg-[#5131E8]/90 text-lg py-6">
-                Continuar
-              </Button>
-            </Link>
+            <ContinueButton href="/order-review/identification" />
           </div>
         </div>
       </div>
