@@ -25,7 +25,7 @@ export function UserNav() {
             <Image
               src={user.picture}
               alt="User Image"
-              className="rounded-full h-8 w-8 hidden sm:block"
+              className="rounded-full h-8 w-8"
               width={32}
               height={32}
             />
