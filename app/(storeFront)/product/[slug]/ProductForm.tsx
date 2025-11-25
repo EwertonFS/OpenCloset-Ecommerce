@@ -9,7 +9,7 @@ import Image from "next/image";
 import { Dialog, DialogContent, DialogPortal, DialogTitle } from "@/components/ui/dialog";
 import { formatCurrency } from "@/app/helpers";
 import { SubmitButton } from "@/app/components/SubmitButton";
-import { Badge } from "@/components/ui/badge";
+
 
 type ProductWithVariants = Prisma.ProductGetPayload<{
   include: {

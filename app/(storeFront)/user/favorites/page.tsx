@@ -1,7 +1,7 @@
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { redirect } from "next/navigation";
 import { getUserFavorites } from "@/lib/action";
-import ProductCard from "@/app/(storeFront)/product/ProductCard";
+import { ProductCard } from "@/app/components/ProductCard";
 import { Package } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,11 @@ export default async function FavoritesPage() {
                     </Button>
                 </div>
             ) : (
-                <ProductCard products={favorites} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {favorites.map((product) => (
+                        <ProductCard key={product.id} product={product} />
+                    ))}
+                </div>
             )}
         </div>
     );

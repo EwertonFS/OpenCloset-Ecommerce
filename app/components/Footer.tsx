@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { Facebook, Instagram, Twitter, Youtube } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 const Footer = () => {
     return (
@@ -95,7 +97,7 @@ const Footer = () => {
                     </div>
 
                     {/* Column 4 - Social Media */}
-                    <div className="flex justify-start lg:justify-end">
+                    <div className="flex  flex-col justify-between ">
                         <div className="flex space-x-4">
                             <Link
                                 href="https://twitter.com"
@@ -129,6 +131,11 @@ const Footer = () => {
                             >
                                 <Instagram className="w-5 h-5" />
                             </Link>
+                        </div>
+                        <div className="flex flex-col gap-y-2">
+                            <p className='text-white font-semibold mb-2 text-sm uppercase tracking-wide'>News Letter</p>
+                            <Input type="email" placeholder="Insira seu email" />
+                            <Button>Inscrever-se</Button>
                         </div>
                     </div>
                 </div>

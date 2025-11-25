@@ -1462,3 +1462,40 @@ export async function deleteCategory(formData: FormData) {
   revalidatePath("/dashboard/categories");
   return { success: "Categoria deletada com sucesso!" };
 }
+
+export async function updateUserCpfPhone(formData: FormData) {
+  const { getUser } = getKindeServerSession();
+  const user = await getUser();
+
+  if (!user) {
+    return { error: "User not authenticated" };
+  }
+
+  const cpf = formData.get("cpf") as string;
+  const phone = formData.get("phone") as string;
+
+  if (!cpf || !phone) {
+    return { error: "CPF e Telefone são obrigatórios." };
+  }
+
+  // Basic validation
+  if (cpf.length < 11) {
+    return { error: "CPF inválido." };
+  }
+
+  try {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        cpf: cpf,
+        phone: phone,
+      },
+    });
+
+    revalidatePath("/order-review/identification");
+    return { success: "Dados atualizados com sucesso" };
+  } catch (error) {
+    console.error("Error updating user CPF/Phone:", error);
+    return { error: "Falha ao atualizar dados" };
+  }
+}

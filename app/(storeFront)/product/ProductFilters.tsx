@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { type Category, type Color } from '@prisma/client';
 import { useRouter, usePathname } from 'next/navigation';
-import { Filter, X } from 'lucide-react';
+import { Filter } from 'lucide-react';
 
 interface FilterData {
   categories: (Category & { subcategories: { id: string; name: string }[] })[];
@@ -32,6 +32,14 @@ interface ProductFiltersProps {
   onFilterChange: (newFilters: Partial<SelectedFilters>) => void;
 }
 
+interface FilterContentProps extends ProductFiltersProps {
+  clearFilters: () => void;
+  handleCheckboxChange: (type: 'categories' | 'subcategories' | 'colors', value: string) => void;
+  handleSizeChange: (size: string) => void;
+  currentPrice: number[];
+  setCurrentPrice: (value: number[]) => void;
+}
+
 // Componente de conteúdo dos filtros (reutilizado no desktop e mobile)
 function FilterContent({
   filterData,
@@ -42,7 +50,7 @@ function FilterContent({
   handleSizeChange,
   currentPrice,
   setCurrentPrice
-}: any) {
+}: FilterContentProps) {
   const { categories, colors, sizes, priceRange } = filterData;
 
   return (
@@ -56,7 +64,7 @@ function FilterContent({
           <AccordionTrigger>Categoria</AccordionTrigger>
           <AccordionContent>
             <div className="flex flex-col gap-2 pt-2">
-              {categories.map((category: any) => (
+              {categories.map((category) => (
                 <div key={category.id} className="flex items-center gap-2">
                   <Checkbox
                     id={`cat-${category.name}`}
@@ -76,8 +84,8 @@ function FilterContent({
           <AccordionContent>
             <div className="flex flex-col gap-2 pt-2">
               {categories
-                .flatMap((c: any) => c.subcategories)
-                .map((subcategory: any) => (
+                .flatMap((c) => c.subcategories)
+                .map((subcategory) => (
                   <div key={subcategory.name} className="flex items-center gap-2">
                     <Checkbox
                       id={`sub-${subcategory.name}`}
@@ -114,7 +122,7 @@ function FilterContent({
           <AccordionTrigger>Cor</AccordionTrigger>
           <AccordionContent>
             <div className="flex flex-wrap gap-3 pt-2" >
-              {colors.map((color: any) => (
+              {colors.map((color) => (
                 <button
                   key={color.id}
                   onClick={() => handleCheckboxChange('colors', color.name)}

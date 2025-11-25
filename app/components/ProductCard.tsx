@@ -23,6 +23,14 @@ interface ProductCardProps {
                 name: string;
             } | null;
         };
+        variants?: {
+            id: string;
+            sku: string;
+            price: number;
+            inventory?: {
+                quantity: number;
+            } | null;
+        }[];
     };
 }
 

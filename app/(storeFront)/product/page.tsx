@@ -3,7 +3,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { getFilteredProducts, getFilterData } from '@/lib/action';
 import { type ProductWithCategory, SortOption } from '@/lib/types';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import ProductCard from './ProductCard';
+import { ProductCard } from '@/app/components/ProductCard';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { type Category, type Color } from '@prisma/client';
@@ -117,8 +117,17 @@ export default function ProductListPage() {
               <div className="flex justify-center items-center py-20">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
               </div>
+            ) : products.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500 text-lg">Nenhum produto encontrado.</p>
+                <p className="text-gray-400 text-sm mt-2">Tente ajustar os filtros</p>
+              </div>
             ) : (
-              <ProductCard products={products} />
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+                {products.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
             )}
           </main>
         </div>

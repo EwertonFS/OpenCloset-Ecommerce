@@ -2,13 +2,12 @@
 
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useTransition, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { SubmitButton } from "@/app/components/SubmitButton";
-import { toast } from "sonner";
-import { removeCartItem, updateCartItem } from "@/lib/action";
+import { removeCartItem } from "@/lib/action";
 
 type CartItem = {
   sku: string;
@@ -21,8 +20,6 @@ type CartItem = {
 };
 
 export function ShoppingCart({ cartItems }: { cartItems: CartItem[] }) {
-  const [isPending, startTransition] = useTransition();
-
   const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
   const router = useRouter();
 

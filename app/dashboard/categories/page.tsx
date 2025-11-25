@@ -24,7 +24,7 @@ export default async function CategoriesPage() {
         </Button>
       </div>
 
-      <CategoryList categories={parentCategories as any} />
+      <CategoryList categories={parentCategories} />
     </>
   );
 }

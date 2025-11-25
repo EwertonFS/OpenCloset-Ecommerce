@@ -192,7 +192,7 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000' || 'https://open-closet.vercel.app';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
     const payload = {
       billingTypes: ["CREDIT_CARD"],

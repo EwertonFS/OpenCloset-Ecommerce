@@ -7,7 +7,7 @@ import { ChevronDown, ChevronUp, Pencil, PlusCircle } from "lucide-react";
 import Link from "next/link";
 import React, { useState } from "react";
 import { DeleteCategoryButton } from "../components/dashboard/DeleteCategoryButton";
-import { cn } from "@/lib/utils";
+
 
 interface Category {
     id: string;
