@@ -6,10 +6,10 @@ import { usePathname } from 'next/navigation';
 const links = [
   { name: 'Dashboard', href: '/dashboard' },
   { name: 'Orders', href: '/dashboard/orders' },
-  { name: 'Products', href: '/dashboard/products' },
   { name: 'Categories', href: '/dashboard/categories' },
-  { name: 'Banner Picture', href: '/dashboard/banner' },
+  { name: 'Products', href: '/dashboard/products' },
   { name: 'Coupons', href: '/dashboard/coupons' },
+  { name: 'Banner Picture', href: '/dashboard/banner' },
 ];
 
 // foi utilizado o cn para e o hoook para pegar estado da url e deixar o link ativo
@@ -25,8 +25,9 @@ const DashboardNavigation = () => {
           href={link.href}
           className={cn(
             link.href === pathname
-              ? 'text-black'
+              ? 'text-foreground'
               : 'text-muted-foreground hover:text-foreground',
+            'font-medium transition-colors'
           )}
         >
           {link.name}{' '}
