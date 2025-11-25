@@ -100,7 +100,7 @@ export function Header({ children, cartCount }: { children: React.ReactElement<C
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {(user?.email === 'ewerton.businees@gmail.com' || user?.email === 'erickalaissantos@gmail.com') && (
+                {(user?.email === 'ewerton.businees@gmail.com' || user?.email === 'erickalaissantos@hotmail.com') && (
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard">Admin</Link>
                   </DropdownMenuItem>

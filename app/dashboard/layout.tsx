@@ -11,7 +11,7 @@ const DashboardLayout = async ({ children }: { children: React.ReactNode }) => {
 
   const user = await getUser();
 
-  if (!user || (user.email !== 'ewerton.businees@gmail.com' && user.email !== 'erickalaissantos@gmail.com')) {
+  if (!user || (user.email !== 'ewerton.businees@gmail.com' && user.email !== 'erickalaissantos@hotmail.com')) {
     redirect('/');
   }
 
