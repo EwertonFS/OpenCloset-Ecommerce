@@ -50,10 +50,7 @@ async function getData() {
       return sum + (variant.inventory?.quantity || 0);
     }, 0);
 
-    const initialStock = product.variants.reduce((sum, variant) => {
-      const initialMovement = variant.stockMovements.find(m => m.notes === 'Estoque inicial');
-      return sum + (initialMovement?.quantity || 0);
-    }, 0);
+
 
     const itemsSold = product.variants.reduce((sum, variant) => {
       const soldMovements = variant.stockMovements.filter(m => m.type === 'OUT');
@@ -64,7 +61,7 @@ async function getData() {
     return {
       ...product,
       totalQuantity, // Estoque Atual
-      initialStock, // Estoque Inicial
+
       itemsSold, // Itens Vendidos
     };
   });
@@ -92,23 +89,23 @@ const ProductsRoute = async () => {
         </CardHeader>
         <CardContent>
           <Table>
-            <TableHeader>
+            <TableHeader className="text-center">
               <TableRow>
-                <TableHead>Imagem</TableHead>
-                <TableHead>Nome</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Destaque</TableHead>
-                <TableHead>Categoria</TableHead>
-                <TableHead>Preço Base</TableHead>
-                <TableHead>Estoque Inicial</TableHead>
-                <TableHead className="w-[100px]">Data</TableHead>
-                <TableHead>Estoque Atual</TableHead>
-                <TableHead>Itens Vendidos</TableHead>
+                <TableHead className="text-center">Imagem</TableHead>
+                <TableHead className="text-center">Nome</TableHead>
+                <TableHead className="text-center">Status</TableHead>
+                <TableHead className="text-center">Destaque</TableHead>
+                <TableHead className="text-center">Categoria</TableHead>
+                <TableHead className="text-center">Preço Base</TableHead>
+
+                <TableHead className="w-[100px] text-center">Data</TableHead>
+                <TableHead className="text-center">Estoque</TableHead>
+                <TableHead className="text-center">Nº Vendidos</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
 
-            <TableBody>
+            <TableBody className='text-center'>
               {data.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell>
@@ -120,12 +117,12 @@ const ProductsRoute = async () => {
                       className="rounded-md object-cover h-16 w-16"
                     />
                   </TableCell>
-                  <TableCell>{item.name}</TableCell>
+                  <TableCell className="truncate max-w-[150px]">{item.name}</TableCell>
                   <TableCell>{item.status}</TableCell>
                   <TableCell>{item.isFeatured ? 'Sim' : 'Não'}</TableCell>
                   <TableCell>{item.category.name}</TableCell>
                   <TableCell>{item.price}</TableCell>
-                  <TableCell>{item.initialStock}</TableCell>
+
                   <TableCell>
                     {item.createdAt.toLocaleDateString('pt-BR')}
                   </TableCell>
