@@ -9,7 +9,10 @@ const Home = () => {
     return (
         <>
             <main className="flex flex-col gap-y-8 md:gap-y-12 w-full" >
-                <Hero />
+                <div className="mx-4 md:mx-6 lg:mx-10 ">
+                    <Hero />
+                </div>
+
                 <Brands />
                 <BestSellers />
                 <Promotions />
