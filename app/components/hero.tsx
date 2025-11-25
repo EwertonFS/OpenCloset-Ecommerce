@@ -36,13 +36,13 @@ const Hero = async () => {
       <CarouselContent>
         {data.map((item) => (
           <CarouselItem key={item.id}>
-            <div className="relative h-[40vh] sm:h-[50vh] md:h-[60vh] lg:h-[80vh] w-full">
+            <div className="relative h-[40vh] sm:h-[50vh] md:h-[60vh] lg:h-[80vh] w-full overflow-hidden rounded-xl">
               <Image
                 alt={item.title}
                 src={item.imageString}
                 fill
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 100vw"
-                className="object-cover object-center rounded-none md:rounded-xl"
+                className="object-cover object-center"
                 priority
               />
               <div className="absolute bottom-6 left-4 md:top-10 md:left-10 md:bottom-auto max-w-[80%] md:max-w-lg rounded-xl bg-black/60 backdrop-blur-sm p-4 md:p-6 text-white shadow-lg transition-all hover:bg-black/70">
