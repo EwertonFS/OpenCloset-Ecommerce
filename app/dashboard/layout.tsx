@@ -11,14 +11,16 @@ const DashboardLayout = async ({ children }: { children: React.ReactNode }) => {
 
   const user = await getUser();
 
-  if (!user || (user.email !== 'ewerton.businees@gmail.com' && user.email !== 'erickalais13@gmail.com')) {
+  if (!user || (user.email !== 'ewerton.businees@gmail.com' && user.email !== 'erickalaissantos@gmail.com')) {
     redirect('/');
   }
 
   return (
     <div className="flex  w-full flex-col max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <header className="sticky top-0 flex h-16 items-center justify-between gap-4 border-b">
-        <DashboardNavigation />
+        <nav className="hidden md:flex md:items-center md:gap-5 md:text-sm lg:gap-6">
+          <DashboardNavigation />
+        </nav>
         <MobileNav />
         <UserNav />
       </header>
