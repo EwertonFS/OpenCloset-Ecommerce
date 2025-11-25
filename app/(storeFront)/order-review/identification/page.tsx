@@ -9,6 +9,7 @@ import FormAddress from "@/app/(storeFront)/order-review/identification/componen
 import { getCart, getUserAddresses, getDbUser } from "@/lib/action";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { CpfPhoneModal } from "./component/CpfPhoneModal";
 
 import { type User, type Address } from "@prisma/client";
 
@@ -52,6 +53,7 @@ export default function IdentificationPage() {
     const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
     const [shippingCost, setShippingCost] = useState(0);
     const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
+    const [isCpfModalOpen, setIsCpfModalOpen] = useState(false);
     const router = useRouter();
 
     const subtotal = cartItems.reduce((acc, item) => acc + item.lineTotal, 0);
@@ -168,6 +170,12 @@ export default function IdentificationPage() {
         }
     };
 
+    const handleCpfSuccess = (cpf: string, phone: string) => {
+        if (dbUser) {
+            setDbUser({ ...dbUser, cpf, phone });
+        }
+    };
+
     const handleCheckout = async (address: Partial<Address>) => {
         const fullAddress = { ...userAddress, ...address } as Address;
 
@@ -177,7 +185,7 @@ export default function IdentificationPage() {
         }
 
         if (!dbUser?.cpf || !dbUser?.phone) {
-            alert("Para continuar com o pagamento, por favor, vá até a sua área de usuário e cadastre seu CPF e Telefone.");
+            setIsCpfModalOpen(true);
             return;
         }
 
@@ -299,6 +307,11 @@ export default function IdentificationPage() {
                     </div>
                 </div>
             </div>
+            <CpfPhoneModal
+                isOpen={isCpfModalOpen}
+                onOpenChange={setIsCpfModalOpen}
+                onSuccess={handleCpfSuccess}
+            />
         </div>
     );
 }

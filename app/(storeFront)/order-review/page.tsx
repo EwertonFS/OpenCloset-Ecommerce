@@ -1,6 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+
 import { NewArrivals } from "@/app/components/NewArrivals";
 import { Plus, Trash2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";

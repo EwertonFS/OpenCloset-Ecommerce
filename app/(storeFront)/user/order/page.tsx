@@ -149,12 +149,12 @@ export default async function MyOrdersPage() {
                     ))}
                   </div>
 
-                  {/* Botão Ver Detalhes */}
-                  <div className="flex-shrink-0 w-full sm:w-auto">
+                  {/* Botão  */}
+                  {/* <div className="flex-shrink-0 w-full sm:w-auto">
                     <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium">
                       Ver Detalhes
                     </Button>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             );

@@ -1,6 +1,6 @@
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { PersonalDetailsForm } from "./order/components/PersonalDetailsForm";
+import { PersonalDetailsForm } from "./components/PersonalDetailsForm";
 
 
 
