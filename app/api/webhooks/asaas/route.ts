@@ -117,32 +117,41 @@ export async function POST(request: Request) {
     if (eventType === 'PAYMENT_RECEIVED' || eventType === 'PAYMENT_CONFIRMED') {
       const paymentData = payload.payment;
       const paymentId = paymentData.id;
-      const asaasCustomerId = paymentData.customer;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const checkoutSessionId = (payload.payment as any).checkoutSession;
 
-      if (!asaasCustomerId) {
-        console.error(`Webhook para pagamento ${paymentId} recebido sem um ID de cliente Asaas. O pedido não pode ser processado.`);
-        return NextResponse.json({ message: 'ID do cliente ausente no webhook.' }, { status: 400 });
+      if (!checkoutSessionId) {
+        console.error(`Webhook para pagamento ${paymentId} recebido sem um checkoutSession ID. O pedido não pode ser processado.`);
+        return NextResponse.json({ message: 'checkoutSession ID ausente no webhook.' }, { status: 400 });
       }
 
-      // Encontrar o registro de checkout temporário usando o asaasCustomerId
-      const checkout = await prisma.checkout.findFirst({
+      console.log(`🔍 Procurando checkout com ID: ${checkoutSessionId}`);
 
-        where: {
+      // Retry logic: tenta encontrar o checkout até 3 vezes com delay
+      let checkout: Checkout | null = null;
+      const maxRetries = 3;
 
-          paymentProviderData: {
-            path: ['customerId'],
-            equals: asaasCustomerId,
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        checkout = await prisma.checkout.findFirst({
+          where: {
+            id: checkoutSessionId,
           },
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-      }) as Checkout | null;
+        }) as Checkout | null;
 
+        if (checkout) {
+          console.log(`✅ Checkout encontrado na tentativa ${attempt}`);
+          break;
+        }
+
+        if (attempt < maxRetries) {
+          console.log(`⏳ Checkout não encontrado. Tentativa ${attempt}/${maxRetries}. Aguardando 2s...`);
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Aguarda 2 segundos
+        }
+      }
 
       if (!checkout) {
-        console.error(`Registro de checkout com asaasCustomerId ${asaasCustomerId} não encontrado para o pagamento ${paymentId}.`);
-        return NextResponse.json({ message: `Checkout não encontrado.` }, { status: 200 });
+        console.error(`❌ Registro de checkout com ID ${checkoutSessionId} não encontrado para o pagamento ${paymentId} após ${maxRetries} tentativas.`);
+        return NextResponse.json({ message: `Checkout não encontrado após ${maxRetries} tentativas.` }, { status: 200 });
       }
 
       // 6. Criar o pedido real no banco de dados e decrementar o estoque
@@ -168,6 +177,11 @@ export async function POST(request: Request) {
         }) as Order;
 
         for (const item of order.items) {
+          // Buscar o SKU para mensagem de erro mais clara
+          const variant = await tx.productVariant.findUnique({
+            where: { id: item.variantId },
+            select: { sku: true },
+          });
 
           const inventoryUpdate = await tx.inventory.updateMany({
             where: {
@@ -184,7 +198,7 @@ export async function POST(request: Request) {
           });
 
           if (inventoryUpdate.count === 0) {
-            throw new Error(`Insufficient stock for SKU: ${item.variantId}.`);
+            throw new Error(`Estoque insuficiente para o SKU: ${variant?.sku || item.variantId}. Quantidade solicitada: ${item.quantity}`);
           }
 
           await tx.stockMovement.create({
@@ -206,73 +220,117 @@ export async function POST(request: Request) {
 
       console.log(`Novo pedido ${newOrder.id} criado com o status PAGO.`);
 
+      // Verificar se o endereço de entrega é Aracaju
+      const deliveryAddress = await prisma.address.findUnique({
+        where: { id: checkout.address.id }
+      });
+
+      const isAracaju = deliveryAddress?.city?.trim().toLowerCase() === 'aracaju';
+
       // --- INÍCIO DA INTEGRAÇÃO MELHOR ENVIO ---
-      try {
-        console.log(`Iniciando geração de etiqueta para o pedido ${newOrder.id}`);
+      // Pula integração se for entrega em Aracaju (será feita por motoboy)
+      if (!isAracaju) {
+        try {
+          console.log(`Iniciando geração de etiqueta para o pedido ${newOrder.id}`);
 
-        // 1. Adicionar ao carrinho
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const cartItem = await addToCart(newOrder as any) as { id: string };
-        console.log(`Pedido ${newOrder.id} adicionado ao carrinho do Melhor Envio com ID: ${cartItem.id}`);
+          // 1. Adicionar ao carrinho
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const cartItem = await addToCart(newOrder as any) as { id: string };
+          console.log(`Pedido ${newOrder.id} adicionado ao carrinho do Melhor Envio com ID: ${cartItem.id}`);
 
-        // 2. Comprar a etiqueta
-        const purchase = (await checkoutCart([cartItem.id])) as MelhorEnvioPurchase;
-        console.log(`Compra da etiqueta para o pedido ${newOrder.id} realizada com sucesso.`);
-        console.log("Conteúdo do objeto 'purchase':", JSON.stringify(purchase, null, 2)); // DEBUG
+          // 2. Comprar a etiqueta
+          const purchase = (await checkoutCart([cartItem.id])) as MelhorEnvioPurchase;
+          console.log(`Compra da etiqueta para o pedido ${newOrder.id} realizada com sucesso.`);
+          console.log("Conteúdo do objeto 'purchase':", JSON.stringify(purchase, null, 2)); // DEBUG
 
-        // 3. Gerar a etiqueta
-        // A API de geração pode demorar um pouco, então esperamos um momento.
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Delay de 2 segundos
-        const generated = await generateLabel(purchase.purchase.orders.map((o: MelhorEnvioOrder) => o.id));
-        console.log(`Geração da etiqueta para o pedido ${newOrder.id} concluída.`);
+          // 3. Gerar a etiqueta
+          // A API de geração pode demorar um pouco, então esperamos um momento.
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Delay de 2 segundos
+          const generated = await generateLabel(purchase.purchase.orders.map((o: MelhorEnvioOrder) => o.id));
+          console.log(`Geração da etiqueta para o pedido ${newOrder.id} concluída.`);
 
-        // 4. Obter URL de impressão
-        // O objeto 'generated' tem a 'generate_key' e os IDs dos pedidos como chaves.
-        // Filtramos para obter apenas os IDs dos pedidos.
-        const orderIdsToPrint = Object.keys(generated as object).filter(key => key !== 'generate_key');
+          // 4. Obter URL de impressão
+          // O objeto 'generated' tem a 'generate_key' e os IDs dos pedidos como chaves.
+          // Filtramos para obter apenas os IDs dos pedidos.
+          const orderIdsToPrint = Object.keys(generated as object).filter(key => key !== 'generate_key');
 
-        const printInfo = await getLabelPrintUrl(orderIdsToPrint) as { url: string };
-        const labelUrl = printInfo.url; // Correção: Acessar a URL diretamente do objeto
+          const printInfo = await getLabelPrintUrl(orderIdsToPrint) as { url: string };
+          const labelUrl = printInfo.url; // Correção: Acessar a URL diretamente do objeto
 
-        // Extrair o código de rastreio da resposta da compra
-        const trackingCode = purchase.purchase.orders[0]?.tracking;
+          // Extrair o código de rastreio da resposta da compra
+          const trackingCode = purchase.purchase.orders[0]?.tracking;
 
-        if (labelUrl || trackingCode) {
-          // Encontrar ou criar o provedor de frete 'Melhor Envio'
-          let melhorEnvioProvider = await prisma.shippingProvider.findUnique({
-            where: { name: "Melhor Envio" },
+          if (labelUrl || trackingCode) {
+            // Encontrar ou criar o provedor de frete 'Melhor Envio'
+            let melhorEnvioProvider = await prisma.shippingProvider.findUnique({
+              where: { name: "Melhor Envio" },
+            });
+
+            if (!melhorEnvioProvider) {
+              melhorEnvioProvider = await prisma.shippingProvider.create({
+                data: { name: "Melhor Envio" },
+              });
+            }
+
+            // 5. Salvar URL da etiqueta e código de rastreio no Shipment
+            await prisma.shipment.create({
+              data: {
+                orderId: newOrder.id,
+                shippingProviderId: melhorEnvioProvider.id,
+                providerShipmentId: purchase.purchase.orders[0]?.id, // Assuming this is the provider's shipment ID
+                trackingCode: trackingCode,
+                shippingLabelUrl: labelUrl,
+              },
+            });
+            console.log(`URL da etiqueta e código de rastreio para o pedido ${newOrder.id} salvos no Shipment.`);
+          } else {
+            console.error(`Não foi possível obter a URL de impressão ou o código de rastreio para o pedido ${newOrder.id}`);
+          }
+
+        } catch (shippingError: unknown) {
+          if (shippingError instanceof Error) {
+            console.error(`ERRO AO GERAR ETIQUETA DE ENVIO para o pedido ${newOrder.id}:`, shippingError.message);
+          } else {
+            console.error(`ERRO AO GERAR ETIQUETA DE ENVIO para o pedido ${newOrder.id}:`, shippingError);
+          }
+          // Mesmo com erro no frete, o pedido foi criado. Você pode adicionar um status ou log para tratamento manual.
+        }
+        // --- FIM DA INTEGRAÇÃO MELHOR ENVIO ---
+      } else {
+        console.log(`Pedido ${newOrder.id} é para Aracaju - será entregue por motoboy (sem integração Melhor Envio)`);
+
+        // Criar registro de envio local (Motoboy)
+        try {
+          const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://open-closet.vercel.app';
+          const receiptUrl = `${baseUrl}/receipt/${newOrder.id}`;
+
+          // Encontrar ou criar provedor de envio local
+          let localProvider = await prisma.shippingProvider.findFirst({
+            where: { name: "Entrega Local" },
           });
 
-          if (!melhorEnvioProvider) {
-            melhorEnvioProvider = await prisma.shippingProvider.create({
-              data: { name: "Melhor Envio" },
+          if (!localProvider) {
+            localProvider = await prisma.shippingProvider.create({
+              data: { name: "Entrega Local" },
             });
           }
 
-          // 5. Salvar URL da etiqueta e código de rastreio no Shipment
+          // Criar Shipment com URL do recibo
           await prisma.shipment.create({
             data: {
               orderId: newOrder.id,
-              shippingProviderId: melhorEnvioProvider.id,
-              providerShipmentId: purchase.purchase.orders[0]?.id, // Assuming this is the provider's shipment ID
-              trackingCode: trackingCode,
-              shippingLabelUrl: labelUrl,
+              shippingProviderId: localProvider.id,
+              providerShipmentId: `LOCAL-${newOrder.id.substring(0, 8)}`,
+              trackingCode: "A CAMINHO",
+              shippingLabelUrl: receiptUrl,
             },
           });
-          console.log(`URL da etiqueta e código de rastreio para o pedido ${newOrder.id} salvos no Shipment.`);
-        } else {
-          console.error(`Não foi possível obter a URL de impressão ou o código de rastreio para o pedido ${newOrder.id}`);
-        }
+          console.log(`✅ Recibo de entrega local gerado: ${receiptUrl}`);
 
-      } catch (shippingError: unknown) {
-        if (shippingError instanceof Error) {
-          console.error(`ERRO AO GERAR ETIQUETA DE ENVIO para o pedido ${newOrder.id}:`, shippingError.message);
-        } else {
-          console.error(`ERRO AO GERAR ETIQUETA DE ENVIO para o pedido ${newOrder.id}:`, shippingError);
+        } catch (localShipmentError) {
+          console.error("Erro ao criar registro de envio local:", localShipmentError);
         }
-        // Mesmo com erro no frete, o pedido foi criado. Você pode adicionar um status ou log para tratamento manual.
       }
-      // --- FIM DA INTEGRAÇÃO MELHOR ENVIO ---
     }
 
     return NextResponse.json({ message: 'Webhook recebido com sucesso' }, { status: 200 });

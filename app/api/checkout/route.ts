@@ -48,20 +48,36 @@ export async function POST(request: Request) {
 
     // 1. Verifica ou cria endereço
     if (!address.id) {
-      const newAddress = await prisma.address.create({
-        data: {
+      // Primeiro, tenta encontrar um endereço existente com os mesmos dados
+      const existingAddress = await prisma.address.findFirst({
+        where: {
+          userId: user.id,
           street: address.street,
           number: address.number,
-          complement: address.complement,
-          district: address.district,
-          city: address.city,
-          state: address.state,
           zipCode: address.zipCode,
-          country: "Brasil",
-          userId: user.id,
         },
       });
-      address.id = newAddress.id;
+
+      if (existingAddress) {
+        // Se já existe, usa o endereço existente
+        address.id = existingAddress.id;
+      } else {
+        // Se não existe, cria um novo
+        const newAddress = await prisma.address.create({
+          data: {
+            street: address.street,
+            number: address.number,
+            complement: address.complement,
+            district: address.district,
+            city: address.city,
+            state: address.state,
+            zipCode: address.zipCode,
+            country: "Brasil",
+            userId: user.id,
+          },
+        });
+        address.id = newAddress.id;
+      }
     }
 
     // 2. Cria um registro de checkout temporário
@@ -74,6 +90,8 @@ export async function POST(request: Request) {
         total: Math.round(total * 100),
       },
     });
+
+    console.log(`✅ Checkout criado com sucesso! ID: ${newCheckout.id} para usuário ${user.id}`);
 
     // 3. Cria cliente no Asaas
     const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
@@ -229,7 +247,18 @@ export async function POST(request: Request) {
     }
     const checkoutData = JSON.parse(checkoutResponseText);
 
-    // 5. Retorna URL do checkout para redirecionar
+    // 6. Atualizar o checkout com o ID da sessão do Asaas
+    if (checkoutData.id) {
+      await prisma.checkout.update({
+        where: { id: newCheckout.id },
+        data: {
+          id: checkoutData.id // Atualiza com o ID do Asaas
+        }
+      });
+      console.log(`✅ Checkout ${newCheckout.id} atualizado com Asaas checkoutSession ID: ${checkoutData.id}`);
+    }
+
+    // 7. Retorna URL do checkout para redirecionar
     return NextResponse.json({ checkoutUrl: checkoutData.link });
   } catch (error) {
     console.error("Erro no processo de checkout:", error);

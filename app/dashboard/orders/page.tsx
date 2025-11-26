@@ -70,8 +70,9 @@ async function getData({ page = 1, pageSize = 10 }: { page?: number; pageSize?: 
 }
 
 // O componente da página agora aceita searchParams para a paginação
-export default async function OrdersPage({ searchParams }: { searchParams?: { page?: string } }) {
-  const currentPage = Number(searchParams?.page) || 1;
+export default async function OrdersPage({ searchParams }: { searchParams?: Promise<{ page?: string }> }) {
+  const params = await searchParams;
+  const currentPage = Number(params?.page) || 1;
   const { data, totalPages } = await getData({ page: currentPage });
 
   return (
@@ -140,7 +141,7 @@ function Pagination({ currentPage, totalPages }: { currentPage: number; totalPag
       <Button asChild variant="outline" disabled={currentPage <= 1}>
         <Link href={`?page=${currentPage - 1}`}>Anterior</Link>
       </Button>
-      
+
       <span className="text-sm font-medium">
         Página {currentPage} de {totalPages}
       </span>
